@@ -3,15 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b6e4f">
+<meta name="theme-color" content="#141414">
 <meta name="robots" content="noindex, nofollow, noarchive">
 <meta name="referrer" content="no-referrer">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="PCM 2">
 <title>PCM 2</title>
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&display=swap">
 <style>
 :root{--bg:#f3f4f1;--sf:#fff;--fg:#1c201e;--mu:#5c655e;--ln:#dde1dc;--ac:#0b6e4f;--ac2:#e5f2ec;--wa:#9a5b00;--wa2:#fdf1dc;--cr:#b3261e;--cr2:#fbe7e5;--r:12px}
 @media (prefers-color-scheme:dark){:root{--bg:#111412;--sf:#1a1f1c;--fg:#e8ece9;--mu:#9aa49d;--ln:#2b322d;--ac:#4cc59a;--ac2:#1b2d25;--wa:#e0a74a;--wa2:#2e2513;--cr:#f2867d;--cr2:#341b19}}
@@ -165,12 +168,48 @@ body.esqon{overflow:hidden}
   #print .ass div{flex:1;border-top:1px solid #000;padding-top:4px;font-size:11px}
   @page{size:A4;margin:12mm}
 }
+
+/* ===== Identidade visual PCM · layout B3 (industrial) ===== */
+
+html,body{font-family:"Barlow","Segoe UI",Roboto,system-ui,sans-serif;}
+h1,#ttl,.cd,.grp,.btn.p,.nl{letter-spacing:.1px}
+#ttl{font-weight:800}
+.hlogo{height:30px;display:block}
+.login .lgimg{display:block;width:210px;margin:0 auto 22px}
+
+:root{--bg:#f2f2f2;--sf:#ffffff;--fg:#141414;--mu:#5f5f5f;--ln:#dedede;--ac:#E35F0A;--ac2:#fdeee4;--wa:#b05a00;--wa2:#fff1e2;--cr:#c42b1c;--cr2:#fde8e6}
+@media (prefers-color-scheme:dark){:root{--bg:#f2f2f2;--sf:#ffffff;--fg:#141414;--mu:#5f5f5f;--ln:#dedede;--ac:#E35F0A;--ac2:#fdeee4}}
+header{background:#141414;color:#fff;border-bottom:0;box-shadow:0 2px 0 #E35F0A}
+header .st{color:#bdbdbd}
+header .iconbtn{background:#262626;border-color:#333;color:#fff}
+header .q{background:#262626;border-color:#333;color:#fff}
+header .chip{background:#262626;border-color:#333;color:#ddd}
+header .chs.l{background:linear-gradient(90deg,#141414 55%,transparent)}header .chs.r{background:linear-gradient(270deg,#141414 55%,transparent)}
+nav.tabs{background:#141414;border-top:0}
+.nb{color:#9a9a9a}.nb[aria-current=page]{color:#E35F0A}
+.chip[aria-pressed=true]{background:#E35F0A!important;border-color:#E35F0A!important;color:#fff!important}
+.btn.p{background:#E35F0A;border-color:#E35F0A}
+.eqtag{background:#141414!important;color:#E35F0A!important}
+.card{border-color:#e4e4e4;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+
+:root{--r:4px}
+.card,.chip,.btn,.q,.iconbtn,.eqtag,.pill,.tag,.box,.f{border-radius:4px!important}
+.card{border:1px solid #d6d6d6;border-top:3px solid #141414}
+.card.carsel{border-top-color:#E35F0A}
+.grp{background:#141414;color:#fff;padding:6px 10px;text-transform:uppercase;letter-spacing:1.2px;font-weight:800;border-left:6px solid #E35F0A;margin:14px 0 6px}
+#ttl{text-transform:uppercase;letter-spacing:1px}
+.nb .nl{text-transform:uppercase;font-size:9px;letter-spacing:.5px}
+.nb[aria-current=page]{box-shadow:inset 0 3px 0 #E35F0A}
+.eqtag{border-radius:2px!important}
+
+.hlogo{height:30px;flex:none}
+header .top>div{flex:1;margin-left:10px;min-width:0}
+#ttl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>
 <div id="vLogin" class="login" hidden>
-  <h1>PCM 2 <span style="font-size:12px;color:var(--wa)">integrado</span></h1>
-  <div class="st">PCM - Manutenção</div>
+  <h1 style="margin:0"><img class="lgimg" src="marca/PCM-Logo-Vertical-FundoClaro.svg" alt="PCM Manutenção"></h1>
   <div class="box">
     <label>ID do usuário</label><input id="lgN" class="f" autocomplete="username" autocapitalize="off" spellcheck="false">
     <label>Senha</label><input id="lgP" class="f" type="password" autocomplete="current-password">
@@ -184,6 +223,7 @@ body.esqon{overflow:hidden}
 <div id="vApp" hidden>
 <header><div class="wrap">
   <div class="top">
+    <img class="hlogo" src="marca/PCM-Logo-Horizontal-FundoEscuro.svg" alt="PCM">
     <div><h1 id="ttl">Peças</h1><div class="st"><span id="dot" class="dot"></span><span id="stx">—</span></div></div>
     <button id="syncB" class="iconbtn">↻ Sincronizar</button>
   </div>
