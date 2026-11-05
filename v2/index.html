@@ -528,7 +528,7 @@ function detPeca(nAba,id){
   const link=v(a,r,'Link de compra');const loja=v(a,r,'Loja');
   const campos=a.cab.map((c,i)=>[c,r[i]]).filter(([c,x])=>x!==''&&x!=null&&!/^imagem id$|^id$/i.test(norm(c)));
   const busc='https://www.google.com/search?q='+encodeURIComponent((v(a,r,'Código')||'')+' '+v(a,r,'Descrição')+' '+(v(a,r,'Fabricante')||''));
-  abre('<div class="ph"><b>'+esc(id)+'</b><button class="lnk" data-x>Fechar</button></div>'+
+  abre('<div class="ph"><b>'+esc(id)+'</b><button class="lnk" data-x>Fechar</button></div>'+botoesAdm('pA')+
     (b?'<img class="big" src="data:image/jpeg;base64,'+b+'" alt="Imagem da peça">':'<div class="note">Sem imagem.</div>')+
     (podeLancar()?'<div class="btns"><label class="btn">📷 '+(b?'Trocar imagem':'Adicionar foto')+'<input type="file" accept="image/*" id="fi" hidden></label></div>':'')+
     '<div class="kv">'+campos.map(([c,x])=>'<b>'+esc(c)+'</b><span>'+esc(x)+'</span>').join('')+'</div>'+
@@ -538,9 +538,12 @@ function detPeca(nAba,id){
     '<div class="btns"><button class="btn p" id="eSv">Salvar</button></div>':'')+
     '<div class="btns">'+(link?'<a class="btn" target="_blank" rel="noopener" href="'+esc(link)+'">Comprar'+(loja?' na '+esc(loja):'')+' ↗</a>':'<a class="btn" target="_blank" rel="noopener" href="'+busc+'">Buscar preço ↗</a>')+
     (podeLancar()?'<button class="btn" id="eLc">+ Lista de compras</button>':'')+
-    (serra?'<button class="btn" id="eVs">Vistas explodidas</button>':'')+(!serra&&v(a,r,'Código')?'<button class="btn" id="eEsq">📐 Procurar no esquema</button>':'')+(isAdm()&&podeLancar()?'<button class="btn" id="eEd">✏️ Editar item</button>':'')+'</div>');
+    (serra?'<button class="btn" id="eVs">Vistas explodidas</button>':'')+(!serra&&v(a,r,'Código')?'<button class="btn" id="eEsq">📐 Procurar no esquema</button>':'')+'</div>');
   const eq_=$('#eEsq');if(eq_)eq_.onclick=()=>{fecha();abreEsquema({cod:String(v(a,r,'Código')).trim()});};
-  if(isAdm()&&podeLancar())$('#eEd').onclick=()=>editarLinha(nAba,r,{id},id,()=>detPeca(nAba,id));
+  if($('#pAEd')){const tit=(serra?'peça da serra ':'peça ')+id;
+    const aviso=()=>{if(serra)return '';const u=['Compras','Kits'].map(n=>{const x=aba(n);const c=col(x.cab,'ID peça','Código');return c<0?0:x.linhas.filter(y=>String(y[c])===String(id)||String(y[c])===String(v(a,r,'Código'))).length;}).reduce((p,q)=>p+q,0);return u?'Esta peça aparece em '+u+' linha(s) de Compras/Kits — elas não serão apagadas.':'';};
+    $('#pAEd').onclick=()=>editarLinha(nAba,r,{id},id,()=>detPeca(nAba,id),{avisoExcluir:aviso()});
+    $('#pADl').onclick=()=>excluirLinha(nAba,r,'a '+tit,null,aviso());}
   if(podeLancar()){
     const q=()=>Math.max(1,num($('#sq').value)||1);
     $('#sm').onclick=()=>$('#sq').value=Math.max(1,q()-1);$('#sp').onclick=()=>$('#sq').value=q()+1;
@@ -619,7 +622,7 @@ async function excluirLinha(nAba,r,titulo,depois,extra){
   if(nAba==='Histórico'||nAba===LED_AB)await excluiFotosDo(nAba,r);
   if(!ref.id&&!Object.keys(ref.conferir).length){toast('Não consegui identificar esta linha com segurança');return;}
   await enfileira(Object.assign({tipo:'excluir',aba:nAba,admin:true},ref));
-  toast(titulo.charAt(0).toUpperCase()+titulo.slice(1)+' excluído(a)');fecha();if(depois)await depois();renderLista();
+  toast('🗑️ Excluído da planilha');fecha();if(depois)await depois();renderLista();
 }
 function botoesAdm(id){return isAdm()&&podeLancar()?'<div class="btns admbtns"><button class="btn" id="'+id+'Ed">✏️ Editar</button><button class="btn" id="'+id+'Dl" style="color:var(--cr)">🗑️ Excluir</button></div>':'';}
 function editarLinha(nAba,r,opBase,titulo,depois,opts){
