@@ -152,6 +152,9 @@ body.esqon{overflow:hidden}
 .carck{flex:none;width:24px;height:24px;border-radius:6px;border:2px solid var(--ln);display:grid;place-items:center;font-weight:700;color:#fff;align-self:center}
 .card.carsel{border-color:var(--ac);background:var(--ac2)}.card.carsel .carck{background:var(--ac);border-color:var(--ac)}
 .carq{font-size:12px;color:var(--mu);margin-top:6px;display:flex;align-items:center;gap:6px}.carq .f{width:80px;padding:5px 8px;margin:0}
+.ftgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:8px}
+.ftth{border:1px solid var(--ln);border-radius:8px;background:var(--bg);padding:0;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;aspect-ratio:1/1.15;color:var(--mu);font-size:11px}
+.ftth img{width:100%;height:100%;object-fit:cover;flex:1;min-height:0}.ftth span{margin:auto}.ftth small{padding:2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--fg)}
 #print{display:none}
 @media print{
   body{background:#fff!important;color:#000!important}
@@ -321,8 +324,10 @@ function num(x){const n=parseFloat(String(x).replace(/\./g,'').replace(',','.'))
 function aplicaLocal(op){
   if(op.tipo==='imagem'){S.img[op.imgKey]=op.b64;put('img',op.imgKey,op.b64);return;}
   if(op.tipo==='config'){if(!S.d.abas[CFG_AB])S.d.abas[CFG_AB]={cab:['Chave','Valor','Alterado por / em'],linhas:[]};const c=S.d.abas[CFG_AB];const i=c.linhas.findIndex(x=>String(x[0])===op.chave);if(op.valor===''||op.valor==null){if(i>=0)c.linhas.splice(i,1);}else if(i>=0)c.linhas[i][1]=op.valor;else c.linhas.push([op.chave,op.valor,'']);return;}
+  if(op.tipo==='excluir'&&op.aba==='imagens_app'){delete S.img[op.id];del('img',op.id);if(S.d.imgApp){const k=S.d.imgApp.indexOf(op.id);if(k>=0)S.d.imgApp.splice(k,1);}return;}
+  if(op.aba===FT_AB&&!(S.d.abas[FT_AB]&&S.d.abas[FT_AB].cab.length))S.d.abas[FT_AB]={cab:['ID','Aba','Registro','Legenda','Data','Por'],linhas:[]};
   const a=aba(op.aba); if(!a.cab.length) return;
-  if(op.tipo==='excluir'){const i=a.linhas.findIndex(x=>String(x[0])===String(op.id));if(i>=0)a.linhas.splice(i,1);return;}
+  if(op.tipo==='excluir'){const i=op.id!=null&&op.id!==''?a.linhas.findIndex(x=>String(x[0])===String(op.id)):(op.idx!=null?op.idx:-1);if(i>=0&&i<a.linhas.length)a.linhas.splice(i,1);return;}
   if(op.tipo==='renomearValor'){const c=col(a.cab,op.coluna);if(c<0)return;a.linhas.forEach(r=>{if(String(r[c])===String(op.de))r[c]=op.para;});return;}
   if(op.tipo==='incluirLote'){(op.linhas||[]).forEach(c=>{const r=a.cab.map(()=>'');Object.keys(c).forEach(k=>{const i=col(a.cab,k);if(i>=0)r[i]=c[k];});a.linhas.push(r);});return;}
   if(op.tipo==='incluir'){const r=a.cab.map(()=>'');Object.keys(op.campos).forEach(k=>{const i=col(a.cab,k);if(i>=0)r[i]=op.campos[k];});if(!r[0])r[0]=op.campos.ID||'(novo)';a.linhas.push(r);return;}
@@ -549,7 +554,76 @@ function detPeca(nAba,id){
 }
 /* editar qualquer campo de um item (administrador). Fórmulas da planilha nunca são sobrescritas. */
 const ED_FORA=/^(id|imagem id|precisao da imagem|estoque atual|comprar)$/;
-function editarLinha(nAba,r,opBase,titulo,depois){
+/* ---------- FOTOS dos registros (Manutenção e LED) ---------- */
+const FT_AB='Fotos registros';
+function regChave(nAba,r){
+  const a=aba(nAba);
+  if(norm(a.cab[0])==='id'&&r[0]&&r[0]!=='(novo)')return String(r[0]);
+  if(norm(a.cab[0])==='id')return '';
+  return 'H:'+[v(a,r,'Data'),v(a,r,'Equipamento'),v(a,r,'Defeito','Descrição','Serviço')].map(x=>String(x||'').trim()).join('|');
+}
+function fotosDe(nAba,chave){const f=aba(FT_AB);return chave?f.linhas.filter(x=>v(f,x,'Aba')===nAba&&String(v(f,x,'Registro'))===chave):[];}
+function blocoFotos(nAba,r){
+  const ch=regChave(nAba,r);const F=fotosDe(nAba,ch);const f=aba(FT_AB);
+  return '<div class="box" style="margin:10px 0"><b>📷 Fotos'+(F.length?' ('+F.length+')':'')+'</b>'+
+    (F.length?'<div class="ftgrid">'+F.map(x=>{const id=String(x[0]);const b=imgDe(id);return '<button class="ftth" data-ft="'+esc(id)+'">'+(b?'<img src="data:image/jpeg;base64,'+b+'" alt="">':'<span>'+(navigator.onLine?'baixando…':'sem internet')+'</span>')+(v(f,x,'Legenda')?'<small>'+esc(v(f,x,'Legenda'))+'</small>':'')+'</button>';}).join('')+'</div>':'<div class="note">Nenhuma foto neste registro.</div>')+
+    (podeLancar()?(ch?'<div class="btns"><label class="btn">📷 Adicionar foto<input type="file" accept="image/*" id="ftAdd" hidden multiple></label></div>':'<div class="note">Sincronize primeiro para poder anexar fotos a este registro novo.</div>'):'')+'</div>';
+}
+function ligaFotos(nAba,r,reabre){
+  const ch=regChave(nAba,r);
+  const inp=$('#ftAdd');
+  if(inp)inp.onchange=async ev=>{
+    const fs=[...ev.target.files];if(!fs.length)return;
+    const leg=fs.length===1?(prompt('Legenda da foto (opcional):','')||''):'';
+    toast('Salvando '+fs.length+' foto(s)…');
+    for(const f of fs){
+      try{const b64=await reduz(f);const id='F'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+        await enfileira({tipo:'imagem',id,b64,imgKey:id});if(S.d.imgApp&&S.d.imgApp.indexOf(id)<0)S.d.imgApp.push(id);
+        await enfileira({tipo:'incluir',aba:FT_AB,campos:{ID:id,Aba:nAba,Registro:ch,Legenda:leg,Data:new Date().toLocaleString('pt-BR'),Por:S.user.nome}});
+      }catch(e){toast(e.message);}
+    }
+    toast('Foto(s) anexada(s)');reabre();renderLista();
+  };
+  $('#pane').querySelectorAll('[data-ft]').forEach(b=>b.onclick=()=>verFoto(nAba,b.dataset.ft,reabre));
+  const falta=fotosDe(nAba,ch).map(x=>String(x[0])).filter(id=>!imgDe(id));
+  if(falta.length&&navigator.onLine)baixaImagens(true).then(()=>{if(!$('#sheet').hidden&&falta.some(id=>imgDe(id)))reabre();}).catch(()=>{});
+}
+function verFoto(nAba,id,volta){
+  const f=aba(FT_AB);const x=f.linhas.find(y=>String(y[0])===id);if(!x)return;const b=imgDe(id);
+  abre('<div class="ph"><b>Foto</b><button class="lnk" id="ftV">← Voltar</button></div>'+
+    (b?'<img class="big" src="data:image/jpeg;base64,'+b+'" alt="Foto do registro" id="ftBig" style="cursor:zoom-in">':'<div class="note">Imagem ainda não baixada neste aparelho.</div>')+
+    '<div class="kv"><b>Legenda</b><span>'+esc(v(f,x,'Legenda')||'—')+'</span><b>Enviada</b><span>'+esc(v(f,x,'Data'))+' por '+esc(v(f,x,'Por'))+'</span></div>'+
+    (isAdm()&&podeLancar()?'<label>Editar legenda</label><input class="f" id="ftLeg" value="'+esc(v(f,x,'Legenda'))+'"><div class="btns"><button class="btn p" id="ftSv">Salvar legenda</button><label class="btn">🔄 Trocar foto<input type="file" accept="image/*" id="ftTroca" hidden></label><button class="btn" id="ftDl" style="color:var(--cr)">🗑️ Excluir foto</button></div>':'<div class="note">Só o administrador edita ou exclui fotos.</div>'));
+  $('#ftV').onclick=volta;
+  const big=$('#ftBig');if(big)big.onclick=()=>{$('#zi').src=big.src;$('#zoom').hidden=false;};
+  if(!$('#ftSv'))return;
+  $('#ftSv').onclick=async()=>{await enfileira({tipo:'atualizar',aba:FT_AB,id,campos:{Legenda:$('#ftLeg').value.trim()},admin:true});toast('Legenda salva');verFoto(nAba,id,volta);};
+  $('#ftTroca').onchange=async ev=>{const fl=ev.target.files[0];if(!fl)return;try{const b64=await reduz(fl);await enfileira({tipo:'imagem',id,b64,imgKey:id,admin:true});toast('Foto trocada');verFoto(nAba,id,volta);}catch(e){toast(e.message);}};
+  $('#ftDl').onclick=async()=>{if(!confirmar('Excluir esta foto?'))return;await enfileira({tipo:'excluir',aba:FT_AB,id,admin:true});await enfileira({tipo:'excluir',aba:'imagens_app',id,admin:true});toast('Foto excluída');volta();renderLista();};
+}
+async function excluiFotosDo(nAba,r){for(const x of fotosDe(nAba,regChave(nAba,r))){const id=String(x[0]);await enfileira({tipo:'excluir',aba:FT_AB,id,admin:true});await enfileira({tipo:'excluir',aba:'imagens_app',id,admin:true});}}
+function nFotos(nAba,r){const n=fotosDe(nAba,regChave(nAba,r)).length;return n?'<span class="pill ok">📷 <b>'+n+'</b></span>':'';}
+
+/* ---------- edição / exclusão pelo administrador (qualquer aba) ---------- */
+function refLinha(nAba,r){
+  const a=aba(nAba);
+  if(norm(a.cab[0])==='id'&&r[0]!==''&&r[0]!=null)return {id:String(r[0])};
+  const i=a.linhas.indexOf(r);const conferir={};
+  a.cab.forEach((c,j)=>{if(Object.keys(conferir).length<3&&r[j]!==''&&r[j]!=null&&!/data|qtd|quant|estoque|tempo|pot|preco|valor/i.test(norm(c)))conferir[c]=r[j];});
+  return {linha:i+2,idx:i,conferir};
+}
+async function excluirLinha(nAba,r,titulo,depois,extra){
+  if(!isAdm()){toast('Somente o administrador pode excluir');return;}
+  if(!confirmar('Excluir '+titulo+' da planilha?\n\nEssa ação não pode ser desfeita pelo app.'+(extra?'\n\n'+extra:'')))return;
+  const ref=refLinha(nAba,r);
+  if(nAba==='Histórico'||nAba===LED_AB)await excluiFotosDo(nAba,r);
+  if(!ref.id&&!Object.keys(ref.conferir).length){toast('Não consegui identificar esta linha com segurança');return;}
+  await enfileira(Object.assign({tipo:'excluir',aba:nAba,admin:true},ref));
+  toast(titulo.charAt(0).toUpperCase()+titulo.slice(1)+' excluído(a)');fecha();if(depois)await depois();renderLista();
+}
+function botoesAdm(id){return isAdm()&&podeLancar()?'<div class="btns admbtns"><button class="btn" id="'+id+'Ed">✏️ Editar</button><button class="btn" id="'+id+'Dl" style="color:var(--cr)">🗑️ Excluir</button></div>':'';}
+function editarLinha(nAba,r,opBase,titulo,depois,opts){
+  opts=opts||{};
   const a=aba(nAba);
   const cols=a.cab.map((c,i)=>[c,i]).filter(([c])=>c&&!ED_FORA.test(norm(c)));
   const iD=col(a.cab,'Descrição');
@@ -557,12 +631,15 @@ function editarLinha(nAba,r,opBase,titulo,depois){
   const longo=c=>/descri|observ|obs\b|tarefa|item de verif|defeito|acao|ação/i.test(c);
   abre('<div class="ph"><b>Editar '+esc(titulo)+'</b><button class="lnk" data-x>Fechar</button></div>'+
     cols.map(([c,i])=>'<label>'+esc(c)+'</label>'+(longo(c)?'<textarea class="f" data-i="'+i+'">'+esc(r[i])+'</textarea>':'<input class="f" data-i="'+i+'" value="'+esc(r[i])+'">')).join('')+
-    '<div class="btns" style="position:sticky;bottom:0;background:var(--sf);padding:8px 0"><button class="btn p" id="edS">Salvar alterações</button></div><div class="note">Campos calculados pela planilha (fórmulas) não são alterados.</div>');
+    '<div class="btns" style="position:sticky;bottom:0;background:var(--sf);padding:8px 0"><button class="btn p" id="edS">Salvar alterações</button>'+(opts.semExcluir?'':'<button class="btn" id="edX" style="color:var(--cr)">🗑️ Excluir</button>')+'</div><div class="note">Campos calculados pela planilha (fórmulas) não são alterados. Só o administrador edita e exclui.</div>');
+  const ex=$('#edX');if(ex)ex.onclick=()=>excluirLinha(nAba,r,titulo,opts.aoExcluir,opts.avisoExcluir);
   $('#edS').onclick=async()=>{
     const campos={};$('#pane').querySelectorAll('[data-i]').forEach(el=>{const i=+el.dataset.i;const nv=el.value.trim();if(nv!==String(r[i]==null?'':r[i]).trim())campos[a.cab[i]]=nv;});
     if(!Object.keys(campos).length){toast('Nada alterado');fecha();return;}
     if(iD>=0&&a.cab[iD] in campos&&!campos[a.cab[iD]]){toast('A descrição não pode ficar vazia');return;}
-    await enfileira(Object.assign({},opBase,{tipo:'atualizar',aba:nAba,campos}));
+    const chAnt=(nAba==='Histórico'||nAba===LED_AB)?regChave(nAba,r):'';const fAnt=chAnt?fotosDe(nAba,chAnt):[];
+    await enfileira(Object.assign({},opBase,{tipo:'atualizar',aba:nAba,campos,admin:true}));
+    if(fAnt.length){const chN=regChave(nAba,r);if(chN&&chN!==chAnt)for(const x of fAnt)await enfileira({tipo:'atualizar',aba:FT_AB,id:String(x[0]),campos:{Registro:chN},admin:true});}
     toast(Object.keys(campos).length+' campo(s) atualizado(s)');fecha();renderLista();if(depois)depois();
   };
 }
@@ -632,7 +709,7 @@ function detEquip(V,id){
   $('#ttl').textContent='← '+(e.setor||'')+' '+e.nome;$('#ttl').style.cursor='pointer';$('#ttl').onclick=()=>{S.eqSel=null;$('#ttl').onclick=null;$('#ttl').style.cursor='';render();};
   const L=ligacoes(e);const ab=S.eqAba||'eletrica';const adm=isAdm()&&podeLancar();
   const tabs=[['eletrica','Elétrica ('+e.itens.length+')'],['pecas','Peças ('+L.pecas.length+')'],['man','Manutenção ('+L.tarefas.length+')']].concat(e.manual||L.man.length?[['manual','Manual ('+L.man.length+')']]:[]).concat([['dados','Dados']]);
-  let h='<div class="btns" style="margin-top:8px"><button class="btn" id="eqV">← Voltar</button>'+(e.itens.length?'<button class="btn" id="eqEsq">📐 Esquema deste equipamento</button>':'')+(adm?'<button class="btn" id="eqEd">✏️ Editar equipamento</button>':'')+'</div><div class="seg">'+tabs.map(([k,t])=>'<button data-ea="'+k+'" aria-pressed="'+(ab===k)+'">'+esc(t)+'</button>').join('')+'</div>';
+  let h='<div class="btns" style="margin-top:8px"><button class="btn" id="eqV">← Voltar</button>'+(e.itens.length?'<button class="btn" id="eqEsq">📐 Esquema deste equipamento</button>':'')+(adm?'<button class="btn" id="eqEd">✏️ Editar / excluir equipamento</button>':'')+'</div><div class="seg">'+tabs.map(([k,t])=>'<button data-ea="'+k+'" aria-pressed="'+(ab===k)+'">'+esc(t)+'</button>').join('')+'</div>';
   if(ab==='eletrica'){
     const I=e.itens.filter(i=>busca(i.tag+' '+i.desc+' '+i.cod+' '+i.fam+' '+i.local));
     GRUPOS_EQ.forEach(g=>{const G=I.filter(i=>i.grp===g);if(!G.length)return;
@@ -665,7 +742,7 @@ function detEquip(V,id){
   }
   V.innerHTML=h;
   $('#eqV').onclick=()=>{S.eqSel=null;$('#ttl').onclick=null;render();};
-  if(adm)$('#eqEd').onclick=()=>editarLinha(EQ_AB,e.r,{id:e.id},e.nome);
+  if(adm)$('#eqEd').onclick=()=>editarLinha(EQ_AB,e.r,{id:e.id},e.nome,null,{avisoExcluir:e.itens.length?'Os '+e.itens.length+' itens elétricos deste equipamento também serão excluídos.':'',aoExcluir:async()=>{for(const i of e.itens)await enfileira({tipo:'excluir',aba:IT_AB,id:i.id,admin:true});S.eqSel=null;}});
   const nt=$('#eqNt');if(nt)nt.onclick=()=>{S.mUlt=e.setor;formTarefa();};
   const eqe=$('#eqEsq');if(eqe)eqe.onclick=()=>abreEsquema({tags:e.itens.map(i=>i.tag).filter(Boolean),titulo:(e.setor?e.setor+' · ':'')+e.nome});
   const vs=$('#eqVs');if(vs)vs.onclick=()=>listaVistas(e.manual);
@@ -733,7 +810,7 @@ function lManutLed(V,seg){
   const tot=L.reduce((s,r)=>s+(num(v(a,r,'Qtd'))||1),0);const set={};L.forEach(r=>{const k=v(a,r,'Setor')||'—';set[k]=1;});
   V.innerHTML=seg+'<div class="btns" style="margin:6px 0 0"><button class="btn" id="rPdf">📄 PDF do mês</button><button class="btn" id="rMail">✉️ Enviar ao administrador</button><span class="note" style="align-self:center">'+esc(S.chip||('mês atual: '+mesNome(hoje().slice(0,7))))+'</span></div>'+
     '<div class="sum"><div><b>'+tot+'</b><span>refletores trocados'+(S.chip?' em '+esc(S.chip):'')+'</span></div><div><b>'+L.length+'</b><span>registros</span></div><div><b>'+Object.keys(set).length+'</b><span>setores</span></div></div>'+
-    (L.length?'<div class="list">'+L.slice(0,S.lim).map(r=>'<button class="card" data-l="'+esc(r[0])+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Setor')||'(sem setor)')+'</div><div style="font-size:14px;margin-top:2px">'+esc([v(a,r,'Refletor')?'Refletor '+v(a,r,'Refletor'):'',v(a,r,'Potência')?v(a,r,'Potência')+' W':'',v(a,r,'Motivo')].filter(Boolean).join(' · '))+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+(v(a,r,'Respons')?' · '+esc(v(a,r,'Respons')):'')+(v(a,r,'Observ')?' · '+esc(v(a,r,'Observ')):'')+'</div></div><div class="rt"><span class="tag">LED</span><div class="cm">'+esc(v(a,r,'Qtd')||'1')+' un</div></div></button>').join('')+'</div>'+mais(L.length)
+    (L.length?'<div class="list">'+L.slice(0,S.lim).map(r=>'<button class="card" data-l="'+esc(r[0])+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Setor')||'(sem setor)')+'</div><div style="font-size:14px;margin-top:2px">'+esc([v(a,r,'Refletor')?'Refletor '+v(a,r,'Refletor'):'',v(a,r,'Potência')?v(a,r,'Potência')+' W':'',v(a,r,'Motivo')].filter(Boolean).join(' · '))+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+(v(a,r,'Respons')?' · '+esc(v(a,r,'Respons')):'')+(v(a,r,'Observ')?' · '+esc(v(a,r,'Observ')):'')+'</div></div><div class="rt"><span class="tag">LED</span><div class="cm">'+esc(v(a,r,'Qtd')||'1')+' un</div>'+nFotos(LED_AB,r)+'</div></button>').join('')+'</div>'+mais(L.length)
       :'<div class="empty">Nenhuma troca de LED'+(S.chip?' em '+esc(S.chip):'')+'.'+(podeLancar()?'<br>Toque em <b>+ Troca</b> para registrar.':'')+'</div>');
   $('#rPdf').onclick=()=>pdfManut(mSel||hoje().slice(0,7));
   $('#rMail').onclick=()=>emailManut(mSel||hoje().slice(0,7));
@@ -751,7 +828,7 @@ function lManutNova(V){
   let h='<div class="seg seg4">'+MANUT_ABAS.map(([k,t])=>'<button data-ma="'+k+'" aria-pressed="'+(m===k)+'">'+esc(t)+'</button>').join('')+'</div>'+
     '<div class="btns" style="margin:6px 0 0"><button class="btn" id="rPdf">📄 PDF do mês</button><button class="btn" id="rMail">✉️ Enviar ao administrador</button><span class="note" style="align-self:center">'+esc(S.chip||('mês atual: '+mesNome(hoje().slice(0,7))))+'</span></div>'+
     '<div class="sum"><div><b>'+L.length+'</b><span>registros'+(S.chip?' em '+esc(S.chip):'')+'</span></div><div><b>'+doMes.length+'</b><span>neste mês</span></div><div><b>'+Math.round(parado)+'</b><span>min parado</span></div></div>';
-  h+=L.length?'<div class="list">'+L.slice(0,S.lim).map(([r,i])=>'<button class="card" data-h="'+i+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Equipamento')||'(sem equipamento)')+'</div><div style="font-size:14px;margin-top:2px">'+esc(v(a,r,'Defeito','Descrição','Serviço','Tarefa'))+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+(v(a,r,'Área')?' · '+esc(v(a,r,'Área')):'')+(v(a,r,'Ação')?' · '+esc(v(a,r,'Ação')):'')+'</div></div><div class="rt"><span class="tag '+(norm(v(a,r,'Tipo')).includes('corret')?'w':'')+'">'+esc(v(a,r,'Tipo')||'—')+'</span>'+(num(v(a,r,'Tempo parado','Tempo'))?'<div class="cm">'+esc(v(a,r,'Tempo parado','Tempo'))+' min</div>':'')+'</div></button>').join('')+'</div>'+mais(L.length)
+  h+=L.length?'<div class="list">'+L.slice(0,S.lim).map(([r,i])=>'<button class="card" data-h="'+i+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Equipamento')||'(sem equipamento)')+'</div><div style="font-size:14px;margin-top:2px">'+esc(v(a,r,'Defeito','Descrição','Serviço','Tarefa'))+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+(v(a,r,'Área')?' · '+esc(v(a,r,'Área')):'')+(v(a,r,'Ação')?' · '+esc(v(a,r,'Ação')):'')+'</div></div><div class="rt"><span class="tag '+(norm(v(a,r,'Tipo')).includes('corret')?'w':'')+'">'+esc(v(a,r,'Tipo')||'—')+'</span>'+(num(v(a,r,'Tempo parado','Tempo'))?'<div class="cm">'+esc(v(a,r,'Tempo parado','Tempo'))+' min</div>':'')+nFotos('Histórico',r)+'</div></button>').join('')+'</div>'+mais(L.length)
     :'<div class="empty">'+(m==='hist'?'Nenhum registro de manutenção ainda.':'Nenhuma manutenção '+(m==='corr'?'corretiva':'preventiva')+' registrada.')+(podeLancar()&&m!=='hist'?'<br>Toque em <b>'+(m==='corr'?'+ Corretiva':'+ Preventiva')+'</b> para registrar.':'')+'</div>';
   V.innerHTML=h;
   $('#rPdf').onclick=()=>pdfManut(S.chip?manutMesCod(S.chip):hoje().slice(0,7));
@@ -759,7 +836,9 @@ function lManutNova(V){
   V.onclick=e=>{
     const t=e.target.closest('[data-ma]');if(t){S.mAba=t.dataset.ma;S.lim=40;render();return;}
     const c=e.target.closest('[data-h]');if(!c)return;const r=a.linhas[+c.dataset.h];
-    abre('<div class="ph"><b>'+esc(v(a,r,'Tipo')||'Registro')+'</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a.cab.map((cc,i)=>r[i]!==''?'<b>'+esc(cc)+'</b><span>'+esc(r[i])+'</span>':'').join('')+'</div>');
+    abre('<div class="ph"><b>'+esc(v(a,r,'Tipo')||'Registro')+'</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a.cab.map((cc,i)=>r[i]!==''?'<b>'+esc(cc)+'</b><span>'+esc(r[i])+'</span>':'').join('')+'</div>'+blocoFotos('Histórico',r)+botoesAdm('hR'));
+    ligaFotos('Histórico',r,()=>{const e=document.querySelector('#view [data-h="'+c.dataset.h+'"]');if(e)e.click();else fecha();});
+    if($('#hREd')){$('#hREd').onclick=()=>editarLinha('Histórico',r,refLinha('Histórico',r),'registro');$('#hRDl').onclick=()=>excluirLinha('Histórico',r,'este registro de manutenção');}
   };
 }
 function abreManual(){S.mSel=null;S.eqSel=null;S.tab='manual';S.q='';S.chip='';S.lim=40;$('#q').value='';scrollTo(0,0);render();}
@@ -925,7 +1004,9 @@ function lHist(V){
   const a=aba('Histórico');
   const L=a.linhas.filter(r=>busca(r.join(' '))).slice().reverse();
   V.innerHTML='<div class="bar"><span>'+L.length+' registros</span></div><div class="list">'+L.slice(0,S.lim).map((r)=>'<button class="card" data-h="'+a.linhas.indexOf(r)+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Defeito','Descrição','Serviço','Tarefa'))+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+' · '+esc(v(a,r,'Equipamento'))+'</div><div class="cm">'+esc(v(a,r,'Ação'))+'</div></div><div class="rt"><span class="tag '+(norm(v(a,r,'Tipo')).includes('corret')?'w':'')+'">'+esc(v(a,r,'Tipo')||'—')+'</span></div></button>').join('')+'</div>'+mais(L.length);
-  V.querySelector('.list').onclick=e=>{const c=e.target.closest('[data-h]');if(!c)return;const r=a.linhas[+c.dataset.h];abre('<div class="ph"><b>Registro</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a.cab.map((cc,i)=>r[i]!==''?'<b>'+esc(cc)+'</b><span>'+esc(r[i])+'</span>':'').join('')+'</div>');};
+  V.querySelector('.list').onclick=e=>{const c=e.target.closest('[data-h]');if(!c)return;const r=a.linhas[+c.dataset.h];abre('<div class="ph"><b>Registro</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a.cab.map((cc,i)=>r[i]!==''?'<b>'+esc(cc)+'</b><span>'+esc(r[i])+'</span>':'').join('')+'</div>'+blocoFotos('Histórico',r)+botoesAdm('hR'));
+    ligaFotos('Histórico',r,()=>{const e=document.querySelector('#view [data-h="'+c.dataset.h+'"]');if(e)e.click();else fecha();});
+    if($('#hREd')){$('#hREd').onclick=()=>editarLinha('Histórico',r,refLinha('Histórico',r),'registro');$('#hRDl').onclick=()=>excluirLinha('Histórico',r,'este registro de manutenção');}};
 }
 function formHist(tipoPre){
   const eqs=[...new Set(aba('Manutenção').linhas.map(r=>v(aba('Manutenção'),r,'Equipamento')).concat(aba('Peças').linhas.map(r=>v(aba('Peças'),r,'Equipamento')),aba('manuais_pecas').linhas.map(r=>v(aba('manuais_pecas'),r,'Equipamento'))).filter(Boolean))].sort();
@@ -1184,6 +1265,7 @@ function ckFeitos(){
 }
 function formCkItem(id){
   if(!podeLancar()){toast('Seu usuário é só de consulta');return;}
+  if(id&&!isAdm()){toast('Só o administrador edita ou exclui itens do checklist');return;}
   const a=aba(CK_AB);const r=id?a.linhas.find(x=>String(x[0])===String(id)):null;
   const eqs=[...new Set(a.linhas.map(x=>v(a,x,'Equipamento')).concat(aba('Manutenção').linhas.map(x=>v(aba('Manutenção'),x,'Equipamento'))).filter(Boolean))].sort();
   const cats=[...new Set(CK_CATS.concat(a.linhas.map(x=>v(a,x,'Categoria'))).filter(Boolean))];
@@ -1192,7 +1274,8 @@ function formCkItem(id){
     '<label>Categoria</label><input id="kiC" class="f" list="dlKC" value="'+esc(r?v(a,r,'Categoria'):'')+'"><datalist id="dlKC">'+cats.map(e=>'<option value="'+esc(e)+'">').join('')+'</datalist>'+
     '<label>O que verificar</label><textarea id="kiI" class="f" placeholder="ex.: Proteções e grades instaladas">'+esc(r?v(a,r,'Item'):'')+'</textarea>'+
     (r?'<label>Situação</label><select id="kiA" class="f"><option value="Sim">Ativo</option><option value="Não"'+(/^n/i.test(v(a,r,'Ativo'))?' selected':'')+'>Inativo (não aparece no checklist)</option></select>':'')+
-    '<div class="btns"><button class="btn p" id="kiS">'+(r?'Salvar':'Adicionar')+'</button>'+(r?'':'<button class="btn" id="kiS2">Adicionar e cadastrar outro</button>')+'</div>');
+    '<div class="btns"><button class="btn p" id="kiS">'+(r?'Salvar':'Adicionar')+'</button>'+(r?'<button class="btn" id="kiDl" style="color:var(--cr)">🗑️ Excluir</button>':'<button class="btn" id="kiS2">Adicionar e cadastrar outro</button>')+'</div>');
+  const kd=$('#kiDl');if(kd)kd.onclick=()=>excluirLinha(CK_AB,r,'o item '+id+' do checklist');
   const salva=async(outro)=>{
     const c={'Equipamento':$('#kiE').value.trim(),'Categoria':$('#kiC').value.trim()||'Geral','Item de verificação':$('#kiI').value.trim()};
     if(!c.Equipamento||!c['Item de verificação']){toast('Informe equipamento e o que verificar');return;}
@@ -1246,6 +1329,7 @@ function lLed(V){
 }
 function formLed(id){
   if(!podeLancar()){toast('Seu usuário é só de consulta');return;}
+  if(id&&!isAdm()){const a0=aba(LED_AB);const r0=a0.linhas.find(x=>String(x[0])===String(id));if(r0)abre('<div class="ph"><b>Troca '+esc(id)+'</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a0.cab.map((c,i)=>r0[i]!==''?'<b>'+esc(c)+'</b><span>'+esc(r0[i])+'</span>':'').join('')+'</div><div class="note">Só o administrador edita ou exclui registros.</div>'+blocoFotos(LED_AB,r0));ligaFotos(LED_AB,r0,()=>formLed(id));return;}
   const a=aba(LED_AB);const r=id?a.linhas.find(x=>String(x[0])===String(id)):null;
   const setores=[...new Set(a.linhas.map(x=>v(a,x,'Setor')).filter(Boolean))].sort();
   const g=k=>r?v(a,r,k):'';
@@ -1256,7 +1340,9 @@ function formLed(id){
     '<div class="two"><div><label>Refletor (identificação)</label><input id="lR" class="f" value="'+esc(g('Refletor'))+'" placeholder="ex.: R-12"></div><div><label>Potência (W)</label><input id="lP" class="f" inputmode="numeric" value="'+esc(g('Potência'))+'"></div></div>'+
     '<label>Motivo</label><select id="lM" class="f">'+['Queimado','Oscilando / piscando','Dano físico','Infiltração / umidade','Preventiva','Outro'].map(o=>'<option'+(g('Motivo')===o?' selected':'')+'>'+o+'</option>').join('')+'</select>'+
     '<label>Observação</label><input id="lO" class="f" value="'+esc(g('Observação'))+'">'+
-    '<div class="btns"><button class="btn p" id="lSv">Salvar</button></div><div class="note">O mês é preenchido automaticamente pela data.</div>');
+    '<div class="btns"><button class="btn p" id="lSv">Salvar</button>'+(r?'<button class="btn" id="lDl" style="color:var(--cr)">🗑️ Excluir</button>':'')+'</div><div class="note">O mês é preenchido automaticamente pela data.'+(r?'':' Depois de salvar, abra o registro para anexar fotos.')+'</div>'+(r?blocoFotos(LED_AB,r):''));
+  if(r)ligaFotos(LED_AB,r,()=>formLed(id));
+  const ld=$('#lDl');if(ld)ld.onclick=()=>excluirLinha(LED_AB,r,'a troca '+id);
   $('#lSv').onclick=async()=>{
     const d=$('#lD').value||hoje();
     const c={'Data da troca':d,'Mês':d.slice(0,7),'Setor / local':$('#lS').value.trim(),'Refletor (identificação)':$('#lR').value.trim(),'Potência (W)':$('#lP').value.trim(),'Qtd':num($('#lQ').value)||1,'Motivo':$('#lM').value,'Observação':$('#lO').value.trim()};
