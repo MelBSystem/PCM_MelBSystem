@@ -130,6 +130,10 @@ textarea.f{min-height:70px}
 .rn span{font-size:13px;overflow:hidden;text-overflow:ellipsis}
 .rn input{padding:8px;font-size:15px}
 .nb .nl{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.nb{position:relative}.nb .bdg{position:absolute;top:2px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#d92d20;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
+.chd{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}.chd button{border:1px solid var(--ln);background:var(--bg);color:inherit;border-radius:999px;padding:6px 11px;font-size:13px;cursor:pointer}.chd button[aria-pressed=true]{background:var(--ac);border-color:var(--ac);color:#fff}
+.aviso{display:flex;gap:10px;align-items:center;background:#fff4e5;color:#7a3d00;border:1px solid #f5c37a;border-radius:var(--r);padding:10px 12px;margin:8px 0;font-size:14px;cursor:pointer;width:100%;text-align:left}.aviso b{color:#b42318}
+@media (prefers-color-scheme:dark){.aviso{background:#3a2410;color:#ffd8a8;border-color:#7a4a12}.aviso b{color:#ff8a80}}
 .eqtag{flex:none;min-width:78px;font-family:ui-monospace,Consolas,monospace;font-weight:700;font-size:12.5px;color:var(--ac);background:var(--ac2);border-radius:8px;padding:6px 6px;text-align:center;align-self:flex-start}
 .pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:6px;background:var(--bg);border:1px solid var(--ln);margin:4px 4px 0 0;color:var(--mu)}.pill b{color:var(--fg)}.pill.ok{background:var(--ac2);border-color:transparent;color:var(--ac)}.pill.w{background:var(--wa2);border-color:transparent;color:var(--wa)}
 .esqv{position:fixed;inset:0;z-index:45;background:var(--bg);display:flex;flex-direction:column}
@@ -430,7 +434,8 @@ function podeLancar(){return S.user&&S.user.perfil!=='consultar';}
 
 
 /* ---------------- telas ---------------- */
-function abreApp(){$('#vLogin').hidden=true;$('#vApp').hidden=false;status();render();}
+function abreApp(){$('#vLogin').hidden=true;$('#vApp').hidden=false;status();render();avisoDoDia();}
+function avisoDoDia(){try{const n=nAvisos();if(!n)return;const k='pcm2_aviso_'+hoje();if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');setTimeout(()=>toast('⚠️ '+n+' manutenç'+(n===1?'ão próxima':'ões próximas')+' — veja em Manut. › Manutenções próximas'),800);}catch(e){}}
 document.querySelector('nav.tabs').onclick=e=>{const b=e.target.closest('.nb');if(!b)return;if(b.dataset.t!==S.tab&&b.dataset.t==='check'&&!S.ck)S.ckModo='fazer';S.mSel=null;S.eqSel=null;S.tab=b.dataset.t;S.q='';S.chip='';S.lim=40;$('#q').value='';scrollTo(0,0);render();};
 $('#q').oninput=e=>{S.q=norm(e.target.value);S.lim=40;clearTimeout(render.t);render.t=setTimeout(renderLista,150);};
 $('#syncB').onclick=()=>sincroniza(true);
@@ -439,14 +444,14 @@ function fecha(){$('#sheet').hidden=true;}
 function abre(h){$('#pane').innerHTML=h;aplicaRotulos($('#pane'));$('#sheet').hidden=false;$('#pane').scrollTop=0;const f=$('#pane [data-x]');if(f)f.onclick=fecha;}
 
 function render(){
-  lembraTela();
+  lembraTela();atualizaBadge();
   document.querySelectorAll('.nb').forEach(b=>b.setAttribute('aria-current',b.dataset.t===S.tab?'page':'false'));
   $('#ttl').textContent=S.tab==='equip'&&S.eqSel?'← '+S.eqSel:nomeTela(S.tab);aplicaNomes();
   $('#q').hidden=S.tab==='mais';
   const fab=$('#fab');
-  const fl={manut:{corr:'+ Corretiva',prev:'+ Preventiva',led:'+ Troca',hist:'+ Registro'}[S.mAba||'corr'],hist:'+ Registro',compras:'+ Item',check:S.ckModo==='itens'?'+ Item':'',led:'+ Troca',manual:isAdm()&&!S.mSel?'+ Tarefa':''}[S.tab];
+  const fl={manut:{corr:'+ Corretiva',prev:'+ Preventiva',prox:'+ Preventiva',led:'+ Troca',hist:'+ Registro'}[S.mAba||'corr'],hist:'+ Registro',compras:'+ Item',check:S.ckModo==='itens'?'+ Item':'',led:'+ Troca',manual:isAdm()&&!S.mSel?'+ Tarefa':'',pecas:isAdm()?'+ Peça':'',equip:isAdm()&&!S.eqSel?'+ Equipamento':''}[S.tab];
   fab.hidden=!(fl&&podeLancar());fab.textContent=fl||'';
-  fab.onclick=S.tab==='manut'?(S.mAba==='led'?()=>formLed():()=>formHist({corr:'Corretiva',prev:'Preventiva'}[S.mAba||'corr'])):S.tab==='hist'?()=>formHist():S.tab==='compras'?()=>formCompra():S.tab==='check'?()=>formCkItem():S.tab==='led'?()=>formLed():S.tab==='manual'?()=>formTarefa():null;
+  fab.onclick=S.tab==='manut'?(S.mAba==='led'?()=>formLed():()=>formHist({corr:'Corretiva',prev:'Preventiva',prox:'Preventiva'}[S.mAba||'corr'])):S.tab==='hist'?()=>formHist():S.tab==='compras'?()=>formCompra():S.tab==='check'?()=>formCkItem():S.tab==='led'?()=>formLed():S.tab==='manual'?()=>formTarefa():S.tab==='pecas'?()=>formNovaPeca():S.tab==='equip'?()=>formNovoEquip():null;
   chips();renderLista();
 }
 function chips(){
@@ -487,7 +492,7 @@ function thumb(key){const b=key&&imgDe(key);return '<div class="th">'+(b?'<img l
 function mais(n){return n>S.lim?'<button class="more" id="mais">Mostrar mais ('+(n-S.lim)+')</button>':'';}
 function ligaMais(){const m=$('#mais');if(m)m.onclick=()=>{S.lim+=40;renderLista();};}
 
-function renderLista(){
+function renderLista(){atualizaBadge();
   const V=$('#view');
   if(!S.d){V.innerHTML='<div class="empty">Sem dados. Toque em ↻ Sincronizar com internet.</div>';return;}
   V.onclick=null;const sb=$('#selbar');if(sb&&!(S.tab==='manual'&&S.mSel)){sb.remove();document.body.classList.remove('comsel');}if(S.tab!=='compras'){S.carModo=false;S.recModo=false;const rb=$('#recbar');if(rb)rb.remove();const cb=$('#carbar');if(cb){cb.remove();document.body.classList.remove('comsel');}}
@@ -806,7 +811,34 @@ async function emailManut(mes){
   try{const x=await api('emailMes',{html,nome:'Manutencao_'+mes.replace('-','_'),titulo:'Relatório de manutenção '+mesNome(mes)});toast('PDF enviado para '+x.para);}
   catch(e){toast(/autoriz|permission|permiss/i.test(e.message)?'O envio por e-mail ainda não foi autorizado no servidor':e.message);}
 }
-const MANUT_ABAS=[['corr','Manutenção Corretiva'],['prev','Manutenção Preventiva'],['led','Troca de LED'],['hist','Histórico de Manutenção']];
+const MANUT_ABAS=[['corr','Manutenção Corretiva'],['prev','Manutenção Preventiva'],['prox','Manutenções próximas'],['led','Troca de LED'],['hist','Histórico de Manutenção']];
+const AVISO_DIAS=7;
+const PRAZOS=[[7,'1 semana'],[15,'15 dias'],[30,'30 dias'],[60,'2 meses'],[90,'3 meses'],[180,'6 meses'],[365,'1 ano']];
+function isoDe(x){x=String(x||'').trim();if(!x)return '';let m=x.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[0];m=x.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);if(m)return m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');const d=new Date(x);return isNaN(d)?'':d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+/* próxima data de cada tarefa: Última execução + Dias (ou a coluna Próxima da planilha) */
+function proxDaTarefa(a,r){const u=isoDe(v(a,r,'Última execução','Última')),d=num(v(a,r,'Dias'));if(u&&d>0)return addDias(u,d);return isoDe(v(a,r,'Próxima'));}
+function proximas(){const a=aba(MN),h=hoje();return a.linhas.map(r=>{const p=proxDaTarefa(a,r);return p?{r,id:String(r[0]),prox:p,falta:difDias(h,p)}:null;}).filter(Boolean).sort((x,y)=>x.prox.localeCompare(y.prox));}
+function nAvisos(){return proximas().filter(x=>x.falta<=AVISO_DIAS).length;}
+function atualizaBadge(){const b=document.querySelector('.nb[data-t=manut]');if(!b)return;let e=b.querySelector('.bdg');const n=S.d&&S.d.abas?nAvisos():0;if(!n){if(e)e.remove();return;}if(!e){e=document.createElement('span');e.className='bdg';b.appendChild(e);}e.textContent=n>99?'99+':n;b.setAttribute('aria-label','Manutenção – '+n+' manutenção(ões) próxima(s)');}
+function rotMAba(k,t){if(k!=='prox')return esc(t);const n=nAvisos();return esc(t)+(n?' <span class="tag c">'+n+'</span>':'');}
+function avisoProx(){const n=nAvisos();if(!n)return '';const L=proximas().filter(x=>x.falta<=AVISO_DIAS);const at=L.filter(x=>x.falta<0).length;
+  return '<button class="aviso" data-ma="prox">⚠️<span><b>'+n+' manutenç'+(n===1?'ão':'ões')+' próxima'+(n===1?'':'s')+'</b>'+(at?' ('+at+' atrasada'+(at===1?'':'s')+')':'')+' — toque para ver e organizar a equipe.</span></button>';}
+function faltaTxt(f){return f<0?'atrasada há '+(-f)+' dia'+(f===-1?'':'s'):f===0?'é hoje':f===1?'amanhã':'em '+f+' dias';}
+function nomeEqTag(t){const e=equipLista().find(x=>x.setor===t);return e?e.nome+' ('+t+')':t;}
+function chipsPrazo(id){return '<div class="chd" id="'+id+'">'+PRAZOS.map(([d,t])=>'<button type="button" data-dd="'+d+'">'+t+'</button>').join('')+'</div>';}
+function ligaChips(id,inp,depois){const c=$('#'+id);if(!c)return;const marca=()=>c.querySelectorAll('[data-dd]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.dd===String(num(inp.value)))));
+  c.onclick=e=>{const b=e.target.closest('[data-dd]');if(!b)return;inp.value=b.dataset.dd;marca();if(depois)depois(+b.dataset.dd,b.textContent);};inp.addEventListener('input',marca);marca();}
+function lManutProx(V,seg){
+  const L=proximas().filter(x=>busca(x.r.join(' ')+' '+nomeEqTag(v(aba(MN),x.r,'Equipamento'))));const a=aba(MN);
+  const at=L.filter(x=>x.falta<0),sem=L.filter(x=>x.falta>=0&&x.falta<=AVISO_DIAS),dep=L.filter(x=>x.falta>AVISO_DIAS);
+  const semProg=a.linhas.length-proximas().length;
+  const card=x=>{const t=x.falta<0?'c':x.falta<=AVISO_DIAS?'w':'';return '<button class="card" data-tp="'+esc(x.id)+'"><div class="ci"><div class="cd">'+esc(v(a,x.r,'Tarefa','Atividade','Descrição'))+'</div><div style="font-size:14px;margin-top:2px">'+esc(nomeEqTag(v(a,x.r,'Equipamento')))+'</div><div class="cm">'+esc(x.id)+' · '+esc(v(a,x.r,'Tipo','Área'))+(v(a,x.r,'Responsável')?' · '+esc(v(a,x.r,'Responsável')):'')+(num(v(a,x.r,'Dias'))?' · a cada '+num(v(a,x.r,'Dias'))+' dias':'')+'</div></div><div class="rt"><b>'+esc(dataBR(x.prox))+'</b><br><span class="tag '+t+'">'+esc(faltaTxt(x.falta))+'</span></div></button>';};
+  const bloco=(t,G)=>G.length?'<div class="grp">'+t+' · '+G.length+'</div><div class="list">'+G.map(card).join('')+'</div>':'';
+  V.innerHTML=seg+'<div class="sum"><div><b>'+at.length+'</b><span>atrasadas</span></div><div><b>'+sem.length+'</b><span>nos próx. '+AVISO_DIAS+' dias</span></div><div><b>'+dep.length+'</b><span>programadas depois</span></div></div>'+
+    (L.length?bloco('⚠️ Atrasadas',at)+bloco('🔔 Nos próximos '+AVISO_DIAS+' dias',sem)+bloco('🗓️ Programadas',dep):'<div class="empty">Nenhuma manutenção programada ainda.<br>Ao lançar uma <b>+ Preventiva</b>, escolha o prazo (15 dias, 30 dias, 2 meses…) e ela aparece aqui. O aviso começa '+AVISO_DIAS+' dias antes da data.</div>')+
+    (semProg>0?'<div class="note" style="margin-top:8px">'+semProg+' tarefa(s) do plano ainda sem execução registrada não aparecem aqui.</div>':'');
+  V.onclick=e=>{const t=e.target.closest('[data-ma]');if(t){S.mAba=t.dataset.ma;S.lim=40;render();return;}const c=e.target.closest('[data-tp]');if(c)detTarefa(c.dataset.tp);};
+}
 function lManutLed(V,seg){
   const a=aba(LED_AB);const mSel=S.chip?manutMesCod(S.chip):'';
   const L=a.linhas.filter(r=>(!mSel||ledMesDa(a,r)===mSel)&&busca(r.join(' '))).slice().reverse();
@@ -821,14 +853,16 @@ function lManutLed(V,seg){
 }
 function lManutNova(V){
   const m=S.mAba||'corr';
-  if(m==='led'){lManutLed(V,'<div class="seg seg4">'+MANUT_ABAS.map(([k,t])=>'<button data-ma="'+k+'" aria-pressed="'+(m===k)+'">'+esc(t)+'</button>').join('')+'</div>');return;}const a=aba('Histórico');
+  const segH='<div class="seg seg4">'+MANUT_ABAS.map(([k,t])=>'<button data-ma="'+k+'" aria-pressed="'+(m===k)+'">'+rotMAba(k,t)+'</button>').join('')+'</div>';
+  if(m==='prox'){lManutProx(V,segH);return;}
+  if(m==='led'){lManutLed(V,'<div class="seg seg4">'+MANUT_ABAS.map(([k,t])=>'<button data-ma="'+k+'" aria-pressed="'+(m===k)+'">'+rotMAba(k,t)+'</button>').join('')+'</div>');return;}const a=aba('Histórico');
   let L=a.linhas.map((r,i)=>[r,i]);
   if(m!=='hist'){const alvo=m==='corr'?'corret':'prevent';L=L.filter(([r])=>norm(v(a,r,'Tipo')).includes(alvo));}
   const mSel=S.chip?manutMesCod(S.chip):'';if(mSel)L=L.filter(([r])=>mesDe(v(a,r,'Data'))===mSel);
   L=L.filter(([r])=>busca(r.join(' '))).reverse();
   const mes=hoje().slice(0,7);const doMes=L.filter(([r])=>{const d=String(v(a,r,'Data'));return d.startsWith(mes)||(/^\d{2}\/\d{2}\/\d{4}/.test(d)&&d.slice(6,10)+'-'+d.slice(3,5)===mes);});
   const parado=L.reduce((s,[r])=>s+num(v(a,r,'Tempo parado','Tempo')),0);
-  let h='<div class="seg seg4">'+MANUT_ABAS.map(([k,t])=>'<button data-ma="'+k+'" aria-pressed="'+(m===k)+'">'+esc(t)+'</button>').join('')+'</div>'+
+  let h='<div class="seg seg4">'+MANUT_ABAS.map(([k,t])=>'<button data-ma="'+k+'" aria-pressed="'+(m===k)+'">'+rotMAba(k,t)+'</button>').join('')+'</div>'+avisoProx()+
     '<div class="btns" style="margin:6px 0 0"><button class="btn" id="rPdf">📄 PDF do mês</button><button class="btn" id="rMail">✉️ Enviar ao administrador</button><span class="note" style="align-self:center">'+esc(S.chip||('mês atual: '+mesNome(hoje().slice(0,7))))+'</span></div>'+
     '<div class="sum"><div><b>'+L.length+'</b><span>registros'+(S.chip?' em '+esc(S.chip):'')+'</span></div><div><b>'+doMes.length+'</b><span>neste mês</span></div><div><b>'+Math.round(parado)+'</b><span>min parado</span></div></div>';
   h+=L.length?'<div class="list">'+L.slice(0,S.lim).map(([r,i])=>'<button class="card" data-h="'+i+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Equipamento')||'(sem equipamento)')+'</div><div style="font-size:14px;margin-top:2px">'+esc(v(a,r,'Defeito','Descrição','Serviço','Tarefa'))+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+(v(a,r,'Área')?' · '+esc(v(a,r,'Área')):'')+(v(a,r,'Ação')?' · '+esc(v(a,r,'Ação')):'')+'</div></div><div class="rt"><span class="tag '+(norm(v(a,r,'Tipo')).includes('corret')?'w':'')+'">'+esc(v(a,r,'Tipo')||'—')+'</span>'+(num(v(a,r,'Tempo parado','Tempo'))?'<div class="cm">'+esc(v(a,r,'Tempo parado','Tempo'))+' min</div>':'')+nFotos('Histórico',r)+'</div></button>').join('')+'</div>'+mais(L.length)
@@ -894,12 +928,13 @@ function barraSel(){
   $('#sbM').onclick=()=>n&&destinoEq('mover',[...S.mSel]);
   $('#sbC').onclick=()=>n&&destinoEq('copiar',[...S.mSel]);
 }
-function dlEquip(id){return '<datalist id="'+id+'">'+todosEquip().map(e=>'<option value="'+esc(e)+'">').join('')+'</datalist>';}
+function dlEquip(id){return '<datalist id="'+id+'">'+[...new Set(equipOpcoes().map(o=>o.tag||o.v))].map(e=>'<option value="'+esc(e)+'">').join('')+'</datalist>';}
 function destinoEq(modo,ids){
   abre('<div class="ph"><b>'+(modo==='mover'?'Mover':'Copiar')+' '+ids.length+' tarefa'+(ids.length===1?'':'s')+'</b><button class="lnk" data-x>Fechar</button></div>'+
     '<label>Equipamento</label><input id="dE" class="f" list="dlE" placeholder="Escolha ou digite um novo">'+dlEquip('dlE')+
     '<div class="note">'+(modo==='mover'?'As tarefas passam para o equipamento escolhido (o histórico de execuções continua).':'Cria uma cópia de cada tarefa no equipamento escolhido, com ID novo e sem data de execução.')+'</div>'+
     '<div class="btns"><button class="btn p" id="dS">'+(modo==='mover'?'Mover':'Copiar')+'</button></div>');
+  botaoLista($('#dE'));
   $('#dS').onclick=async()=>{
     const eq=$('#dE').value.trim();if(!eq){toast('Informe o equipamento');return;}
     if(modo==='mover') await moverTarefas(ids,eq); else await copiarTarefas(ids,eq);
@@ -945,19 +980,24 @@ function detTarefa(id){
   const a=aba(MN);const r=a.linhas.find(x=>String(x[0])===String(id));if(!r)return;
   abre('<div class="ph"><b>'+esc(id)+'</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a.cab.map((c,i)=>r[i]!==''?'<b>'+esc(c)+'</b><span>'+esc(r[i])+'</span>':'').join('')+'</div>'+
     (isAdm()&&podeLancar()?'<div class="btns" style="margin-top:0"><button class="btn" id="tEd">✏️ Editar</button><button class="btn" id="tMv">Mover</button><button class="btn" id="tCp">Copiar para…</button><button class="btn" id="tDl" style="color:var(--cr)">Excluir</button></div>':'')+
-    (podeLancar()?'<div class="box"><b>Registrar execução</b><label>Data</label><input id="xD" class="f" type="date" value="'+hoje()+'"><label>Tempo parado (min)</label><input id="xT" class="f" inputmode="numeric"><label>Observação</label><textarea id="xO" class="f"></textarea><div class="btns"><button class="btn p" id="xS">Registrar</button></div></div>':''));
+    (podeLancar()?'<div class="box"><b>Registrar execução</b><label>Data</label><input id="xD" class="f" type="date" value="'+hoje()+'"><label>Próxima manutenção daqui a</label>'+chipsPrazo('xCh')+'<div class="two"><div><label>Dias</label><input id="xDi" class="f" inputmode="numeric" value="'+esc(num(v(a,r,'Dias'))||'')+'"></div><div><label>Próxima em</label><input id="xN" class="f" type="date"></div></div><label>Tempo parado (min)</label><input id="xT" class="f" inputmode="numeric"><label>Observação</label><textarea id="xO" class="f"></textarea><div class="btns"><button class="btn p" id="xS">Registrar</button></div></div>':''));
   if(isAdm()&&podeLancar()){
     $('#tEd').onclick=()=>formTarefa(id);
     $('#tMv').onclick=()=>destinoEq('mover',[id]);
     $('#tCp').onclick=()=>destinoEq('copiar',[id]);
     $('#tDl').onclick=async()=>{if(!confirmar('Excluir a tarefa '+id+' da planilha? O histórico de execuções não é apagado.'))return;await enfileira({tipo:'excluir',aba:MN,id});toast('Tarefa excluída');fecha();renderLista();};
   }
+  if(podeLancar()){const calc=()=>{const n=num($('#xDi').value);$('#xN').value=n>0?addDias($('#xD').value||hoje(),n):'';};
+    ligaChips('xCh',$('#xDi'),calc);$('#xDi').addEventListener('input',calc);$('#xD').onchange=calc;
+    $('#xN').onchange=()=>{const n=$('#xN').value;if(n){const d=difDias($('#xD').value||hoje(),n);$('#xDi').value=d>0?d:'';$('#xDi').dispatchEvent(new Event('input'));}};calc();}
   if(podeLancar())$('#xS').onclick=async()=>{
     const d=$('#xD').value||hoje();
     const tarefa=v(a,r,'Tarefa','Atividade','Descrição');
-    await enfileira({tipo:'atualizar',aba:MN,id,campos:{[hdr(a,'Última execução','Última')]:d}});
+    const nd=num($('#xDi').value);if($('#xDi').value.trim()&&!(nd>0)){toast('Dias deve ser um número maior que zero');return;}
+    const cx={[hdr(a,'Última execução','Última')]:d};if(nd>0&&String(nd)!==String(num(v(a,r,'Dias'))))cx[hdr(a,'Dias')]=nd;
+    await enfileira({tipo:'atualizar',aba:MN,id,campos:cx});
     await enfileira({tipo:'incluir',aba:'Histórico',prefixo:'H',campos:histCampos({data:d,tipo:'Preventiva',equip:v(a,r,'Equipamento'),area:v(a,r,'Área','Tipo'),desc:tarefa,tarefa:id,acao:'Executada conforme plano',tempo:$('#xT').value,obs:$('#xO').value})});
-    toast('Execução registrada');fecha();renderLista();
+    toast('Execução registrada'+($('#xN')&&$('#xN').value?' · próxima em '+dataBR($('#xN').value):''));fecha();render();
   };
 }
 /* cadastrar / editar tarefa (administrador) */
@@ -977,6 +1017,8 @@ function formTarefa(id){
   abre('<div class="ph"><b>'+(r?'Editar tarefa '+esc(id):'Nova tarefa')+'</b><button class="lnk" data-x>Fechar</button></div>'+F.map(campo).join('')+
     dlEquip('dlE2')+'<datalist id="dlG">'+uniq('Grupo').map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist><datalist id="dlP">'+uniq('Periodicidade').map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist>'+
     '<div class="btns"><button class="btn p" id="fS">'+(r?'Salvar':'Adicionar')+'</button>'+(r?'':'<button class="btn" id="fS2">Adicionar e cadastrar outra</button>')+'</div><div class="note">"Próxima" e "Status" são calculados pela planilha.</div>');
+  botaoLista(document.querySelector('#pane input[list="dlE2"]'));
+  {const fd=$('#fD');const w=document.createElement('div');w.innerHTML=chipsPrazo('fDch');fd.parentNode.insertBefore(w.firstChild,fd);ligaChips('fDch',fd,(d,t)=>{if(!$('#fP').value.trim())$('#fP').value=t==='1 semana'?'Semanal':t;});}
   const salvar=async(outra)=>{
     const novo={};F.forEach(([n,k])=>{novo[n]=$('#'+k).value.trim();});
     if(!novo.Equipamento||!novo.Tarefa){toast('Informe equipamento e tarefa');return;}
@@ -1011,19 +1053,158 @@ function lHist(V){
     ligaFotos('Histórico',r,()=>{const e=document.querySelector('#view [data-h="'+c.dataset.h+'"]');if(e)e.click();else fecha();});
     if($('#hREd')){$('#hREd').onclick=()=>editarLinha('Histórico',r,refLinha('Histórico',r),'registro');$('#hRDl').onclick=()=>excluirLinha('Histórico',r,'este registro de manutenção');}};
 }
+/* lista completa de equipamentos para o lançamento de manutenção (aba Equipamentos + demais abas) */
+function eqNomeTag(e){return e.nome+(e.setor?' ('+e.setor+')':'');}
+function equipOpcoes(){
+  const L=[],vis=new Set();
+  equipLista().forEach(e=>{if(!e.nome)return;const v_=eqNomeTag(e);if(vis.has(v_))return;vis.add(v_);vis.add(e.nome);if(e.setor)vis.add(e.setor);L.push({v:v_,nome:e.nome,tag:e.setor||'',sub:e.modelo||e.local||'',grp:areaDe(e.setor)});});
+  todosEquip().forEach(x=>{if(vis.has(x))return;vis.add(x);L.push({v:x,nome:x,tag:'',sub:'',grp:'Outros'});});
+  const ord=areasEq().concat(['Outros']);
+  return L.sort((a,b)=>(ord.indexOf(a.grp)-ord.indexOf(b.grp))||String(a.tag).localeCompare(String(b.tag),'pt',{numeric:true})||a.nome.localeCompare(b.nome,'pt'));
+}
+function botaoLista(inp){if(!inp||inp.dataset.bl)return;inp.dataset.bl=1;const w=document.createElement('div');w.style.cssText='display:flex;gap:8px';inp.parentNode.insertBefore(w,inp);inp.style.flex='1';w.appendChild(inp);const b=document.createElement('button');b.type='button';b.className='btn';b.style.whiteSpace='nowrap';b.textContent='📋 Lista';b.onclick=()=>escolheEquip(inp,true);w.appendChild(b);}
+function escolheEquip(alvo,soTag){
+  const O=equipOpcoes();
+  const d=document.createElement('div');d.className='sheet';d.id='eqPick';d.style.zIndex='40';
+  d.innerHTML='<div class="pane"><div class="ph"><b>Escolher equipamento</b><button class="lnk" id="epX">Fechar</button></div><input id="epQ" class="f" placeholder="Buscar por nome, TAG ou modelo" autocomplete="off"><div class="note" id="epN"></div><div id="epL"></div></div>';
+  document.body.appendChild(d);
+  const grpN=g=>g==='Outros'?'Outros (de peças, serras e checklist)':nomeFiltro(g,'equip')+(AREA_NOME[g]&&nomeFiltro(g,'equip')===g?' · '+AREA_NOME[g]:'');
+  const desenha=()=>{const q=norm($('#epQ').value);const F=O.filter(o=>!q||norm(o.nome+' '+o.tag+' '+o.sub).includes(q));
+    $('#epN').textContent=F.length+' de '+O.length+' equipamentos';let g0=null,h='';
+    F.forEach((o,i)=>{if(o.grp!==g0){if(g0!==null)h+='</div>';g0=o.grp;h+='<div class="grp">'+esc(grpN(o.grp))+'</div><div class="list">';}
+      h+='<button class="card" data-ev="'+O.indexOf(o)+'">'+(o.tag?'<div class="eqtag">'+esc(o.tag)+'</div>':'')+'<div class="ci"><div class="cd">'+esc(o.nome)+'</div>'+(o.sub?'<div class="cm">'+esc(o.sub)+'</div>':'')+'</div></button>';});
+    if(g0!==null)h+='</div>';$('#epL').innerHTML=h||'<div class="empty">Nada encontrado. Feche e digite o nome direto no campo.</div>';};
+  const sai=()=>d.remove();
+  $('#epX').onclick=sai;d.onclick=e=>{if(e.target===d)sai();};
+  $('#epQ').oninput=desenha;
+  $('#epL').onclick=e=>{const c=e.target.closest('[data-ev]');if(!c)return;const o_=O[+c.dataset.ev];alvo.value=soTag&&o_.tag?o_.tag:o_.v;alvo.dispatchEvent(new Event('input',{bubbles:true}));sai();};
+  desenha();
+}
+function addDias(d,n){const t=new Date((d||hoje())+'T12:00:00');t.setDate(t.getDate()+n);return t.toISOString().slice(0,10);}
+function difDias(d1,d2){return Math.round((new Date(d2+'T12:00:00')-new Date(d1+'T12:00:00'))/864e5);}
+function dataBR(d){const p=String(d||'').split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:d;}
+/* TAG do equipamento a partir do valor do campo ("Nome (TAG)", TAG ou nome) */
+function tagDoEquip(val){val=String(val||'').trim();const o=equipOpcoes().find(x=>x.v===val||x.tag===val||x.nome===val);if(o&&o.tag)return o.tag;const m=val.match(/\(([^()]+)\)\s*$/);return m?m[1].trim():val;}
+/* ---- próximo ID com prefixo (ex.: E184, EQ32) ---- */
+function proxIdPref(nAba,pref){const a=aba(nAba);let m=0,w=pref.length>1?2:3;const re=new RegExp('^'+pref+'(\\d+)$');a.linhas.forEach(r=>{const x=String(r[0]).match(re);if(x){m=Math.max(m,+x[1]);w=Math.max(w,x[1].length);}});return pref+String(m+1).padStart(w,'0');}
+function prefPeca(tipo){const a=aba('Peças');const c={};a.linhas.forEach(r=>{if(v(a,r,'Tipo')!==tipo)return;const x=String(r[0]).match(/^([A-Z]+)\d+$/);if(x)c[x[1]]=(c[x[1]]||0)+1;});const k=Object.keys(c).sort((x,y)=>c[y]-c[x])[0];return k||(norm(tipo).startsWith('mec')?'M':norm(tipo).startsWith('ele')?'E':(String(tipo||'P').trim()[0]||'P').toUpperCase());}
+/* formulário genérico de cadastro (todas as colunas da aba, exceto ID e calculadas) */
+function formNovo(nAba,titulo,cfg){
+  const a=aba(nAba);if(!a.cab.length){toast('Aba "'+nAba+'" não carregada. Sincronize.');return;}
+  const pula=c=>/^id$|^comprar$|^status$|^pr[oó]xima$|^imagem id$/i.test(norm(c))||(cfg.pula||[]).indexOf(c)>=0;
+  const C=a.cab.map((c,i)=>[c,i]).filter(([c])=>!pula(c));
+  const uniq=i=>[...new Set(a.linhas.map(r=>String(r[i]==null?'':r[i]).trim()).filter(Boolean))].sort((x,y)=>x.localeCompare(y,'pt',{numeric:true})).slice(0,300);
+  const numC=c=>/qtd|estoque|pot|dias|quant/i.test(norm(c));
+  const pre=cfg.pre||{};
+  abre('<div class="ph"><b>'+esc(titulo)+'</b><button class="lnk" data-x>Fechar</button></div>'+
+    C.map(([c,i])=>{const id='nv'+i,u=uniq(i),val=pre[c]!=null?pre[c]:'';const ob=(cfg.obrig||[]).indexOf(c)>=0?' *':'';
+      if(/observa|rela[cç][aã]o/i.test(norm(c)))return '<label>'+esc(c)+ob+'</label><textarea id="'+id+'" class="f">'+esc(val)+'</textarea>';
+      const dl=u.length&&u.length<300&&!/^c[oó]digo$|^descri/i.test(norm(c))?'<datalist id="dl'+id+'">'+u.map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist>':'';
+      return '<label>'+esc(c)+ob+'</label><input id="'+id+'" class="f"'+(dl?' list="dl'+id+'"':'')+(numC(c)?' inputmode="decimal"':'')+' value="'+esc(val)+'">'+dl;}).join('')+
+    '<div class="note" id="nvId"></div><div class="btns"><button class="btn p" id="nvS">Cadastrar</button><button class="btn" id="nvS2">Cadastrar e adicionar outro</button></div>');
+  const campoDe=c=>{const x=C.find(([cc])=>cc===c);return x?$('#nv'+x[1]):null;};
+  const idAgora=()=>cfg.id(campoDe);
+  const mostraId=()=>{$('#nvId').textContent='Código interno (ID) que será criado: '+idAgora();};
+  C.forEach(([c,i])=>$('#nv'+i).addEventListener('input',mostraId));mostraId();
+  if(cfg.depois)cfg.depois(campoDe);
+  const salva=async(outro)=>{
+    const campos={};C.forEach(([c,i])=>{const x=$('#nv'+i).value.trim();if(x!=='')campos[c]=numC(c)&&!isNaN(num(x))&&/^[\d.,]+$/.test(x)?num(x):x;});
+    for(const o of (cfg.obrig||[]))if(!campos[o]){toast('Preencha: '+o);return;}
+    const id=idAgora();campos[a.cab[0]]=id;
+    await enfileira({tipo:'incluir',aba:nAba,campos,admin:true});
+    toast(cfg.nome+' '+id+' cadastrado(a)');renderLista();
+    if(outro){const keep={};(cfg.manter||[]).forEach(c=>{if(campos[c]!=null)keep[c]=campos[c];});formNovo(nAba,titulo,Object.assign({},cfg,{pre:keep}));}
+    else{fecha();if(cfg.abrir)cfg.abrir(id);}
+  };
+  $('#nvS').onclick=()=>salva(false);$('#nvS2').onclick=()=>salva(true);
+}
+function formNovaPeca(){formNovo('Peças','Nova peça',{nome:'Peça',obrig:['Descrição'],manter:['Tipo','Equipamento','Conjunto / Categoria','Fabricante','Origem','Local'],pre:{Un:'un'},
+  id:cp=>{const t=cp('Tipo');return proxIdPref('Peças',prefPeca(t?t.value.trim():''));},
+  depois:cp=>{const e=cp('Equipamento');if(e)botaoLista(e);},abrir:id=>detPeca('Peças',id)});}
+function formNovoEquip(){formNovo(EQ_AB,'Novo equipamento',{nome:'Equipamento',obrig:['Equipamento'],manter:['Origem','Área / local'],pre:{Qtd:'1'},
+  id:()=>proxIdPref(EQ_AB,'EQ'),abrir:id=>{S.eqSel=id;S.eqAba='eletrica';render();}});}
+/* ---- escolher peças cadastradas (aba Peças) para o lançamento de manutenção ---- */
+function escolhePecas(alvo,aoFim){
+  const a=aba('Peças');const sel={};
+  const d=document.createElement('div');d.className='sheet';d.id='pcPick';d.style.zIndex='40';
+  d.innerHTML='<div class="pane"><div class="ph"><b>Escolher peças</b><button class="lnk" id="ppX">Fechar</button></div><input id="ppQ" class="f" placeholder="Buscar por descrição, código, ID ou equipamento" autocomplete="off"><div class="note" id="ppN"></div><div id="ppL"></div><div class="btns" style="position:sticky;bottom:0;background:var(--sf);padding-top:8px"><button class="btn p" id="ppOk">Adicionar</button></div></div>';
+  document.body.appendChild(d);
+  const desenha=()=>{const q=norm($('#ppQ').value);const F=a.linhas.filter(r=>!q||norm(r.join(' ')).includes(q));
+    $('#ppN').textContent=F.length+' de '+a.linhas.length+' peças'+(Object.keys(sel).length?' · '+Object.keys(sel).length+' escolhida(s)':'');
+    $('#ppL').innerHTML='<div class="list">'+F.slice(0,150).map(r=>{const id=String(r[0]),n=sel[id]||0;
+      return '<div class="card" data-pp="'+esc(id)+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Descrição'))+'</div><div class="cc">'+esc(v(a,r,'Código'))+'</div><div class="cm">'+esc(id)+' · '+esc(v(a,r,'Equipamento'))+' · estoque '+esc(v(a,r,'Estoque atual')||'0')+'</div></div><div class="stepper" style="margin:0"><button data-m="-1">−</button><input class="f" inputmode="numeric" value="'+n+'" data-q style="width:44px;text-align:center"><button data-m="1">+</button></div></div>';}).join('')+'</div>'+(F.length>150?'<div class="note">Mostrando 150 — refine a busca.</div>':'');};
+  const sai=()=>d.remove();
+  $('#ppX').onclick=sai;d.onclick=e=>{if(e.target===d)sai();};$('#ppQ').oninput=desenha;
+  $('#ppL').onclick=e=>{const b=e.target.closest('[data-m]');if(!b)return;const c=b.closest('[data-pp]');const id=c.dataset.pp;sel[id]=Math.max(0,(sel[id]||0)+(+b.dataset.m));if(!sel[id])delete sel[id];c.querySelector('[data-q]').value=sel[id]||0;$('#ppN').textContent=$('#ppN').textContent.replace(/ · \d+ escolhida\(s\)$/,'')+(Object.keys(sel).length?' · '+Object.keys(sel).length+' escolhida(s)':'');};
+  $('#ppL').oninput=e=>{const q=e.target.closest('[data-q]');if(!q)return;const id=q.closest('[data-pp]').dataset.pp;const n=Math.max(0,Math.round(num(q.value)||0));if(n)sel[id]=n;else delete sel[id];};
+  $('#ppOk').onclick=()=>{const ids=Object.keys(sel);if(!ids.length){toast('Escolha ao menos uma peça (use +)');return;}
+    const txt=ids.map(id=>{const r=a.linhas.find(x=>String(x[0])===id);return sel[id]+'× '+id+' '+(r?v(a,r,'Descrição'):'');});
+    alvo.value=[alvo.value.trim()].concat(txt).filter(Boolean).join(', ');if(aoFim)aoFim(ids.map(id=>({id,q:sel[id]})));sai();};
+  desenha();
+}
 function formHist(tipoPre){
-  const eqs=[...new Set(aba('Manutenção').linhas.map(r=>v(aba('Manutenção'),r,'Equipamento')).concat(aba('Peças').linhas.map(r=>v(aba('Peças'),r,'Equipamento')),aba('manuais_pecas').linhas.map(r=>v(aba('manuais_pecas'),r,'Equipamento'))).filter(Boolean))].sort();
+  const eqs=equipOpcoes().map(o=>o.v);
+  const m=aba(MN);const uniqM=n=>[...new Set(m.linhas.map(x=>v(m,x,n)).filter(Boolean))].sort((x,y)=>x.localeCompare(y,'pt'));
   abre('<div class="ph"><b>'+(tipoPre?'Nova manutenção '+tipoPre.toLowerCase():'Novo registro')+'</b><button class="lnk" data-x>Fechar</button></div>'+
     '<div class="two"><div><label>Data</label><input id="hD" class="f" type="date" value="'+hoje()+'"></div><div><label>Tipo</label><select id="hT" class="f">'+['Corretiva','Preventiva','Preditiva','Melhoria'].map(t=>'<option'+(t===tipoPre?' selected':'')+'>'+t+'</option>').join('')+'</select></div></div>'+
-    '<label>Equipamento</label><input id="hE" class="f" list="dlEq"><datalist id="dlEq">'+eqs.map(e=>'<option value="'+esc(e)+'">').join('')+'</datalist>'+
+    '<label>Equipamento</label><div style="display:flex;gap:8px"><input id="hE" class="f" list="dlEq" placeholder="Digite ou escolha da lista" style="flex:1"><button type="button" class="btn" id="hEl" style="white-space:nowrap">📋 Lista</button></div><datalist id="dlEq">'+eqs.map(e=>'<option value="'+esc(e)+'">').join('')+'</datalist>'+
     '<label>Área</label><select id="hA" class="f"><option>Mecânica</option><option>Elétrica</option><option>Lubrificação</option><option>Operacional</option></select>'+
-    '<label>Defeito / serviço</label><textarea id="hDf" class="f"></textarea><label>Ação realizada</label><textarea id="hAc" class="f"></textarea>'+
-    '<label>Peças usadas</label><input id="hP" class="f" placeholder="ex.: 2× B021, 1× 4820005"><label>Tempo parado (min)</label><input id="hTp" class="f" inputmode="numeric">'+
+    '<label id="pvOptL" style="display:flex;gap:8px;align-items:center;margin-top:10px" hidden><input type="checkbox" id="pvOpt"> 🗓️ Programar a próxima manutenção</label>'+
+    '<div id="pvBox" class="box" style="margin:10px 0" hidden><b>🗓️ Programar próxima manutenção</b><div class="note">O aviso aparece para a equipe '+AVISO_DIAS+' dias antes da data.</div>'+
+      '<label>Tarefa do plano</label><select id="pvSel" class="f"></select>'+
+      '<div id="pvNova"><label>Grupo</label><input id="pvG" class="f" list="dlPvG"><label>Tarefa</label><textarea id="pvX" class="f" placeholder="ex.: Lubrificar mancais"></textarea>'+
+      '<label>Periodicidade</label><input id="pvP" class="f" list="dlPvP" placeholder="ex.: Quinzenal"></div>'+
+      '<label>Próxima manutenção daqui a</label>'+chipsPrazo('pvCh')+
+      '<div class="two"><div><label>Dias</label><input id="pvD" class="f" inputmode="numeric" placeholder="ex.: 15"></div><div><label>Próxima em</label><input id="pvN" class="f" type="date"></div></div>'+
+      '<label>Responsável</label><input id="pvR" class="f" list="dlPvR">'+
+      '<div class="note" id="pvMsg"></div>'+
+      '<datalist id="dlPvG">'+uniqM('Grupo').map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist><datalist id="dlPvP">'+uniqM('Periodicidade').map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist><datalist id="dlPvR">'+uniqM('Responsável').map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist></div>'+
+    '<label id="hDfL">Defeito / serviço</label><textarea id="hDf" class="f"></textarea><label>Ação realizada</label><textarea id="hAc" class="f"></textarea>'+
+    '<label>Peças usadas</label><div style="display:flex;gap:8px"><input id="hP" class="f" placeholder="ex.: 2× B021, 1× 4820005" style="flex:1"><button type="button" class="btn" id="hPl" style="white-space:nowrap">🔩 Peças</button></div>'+
+    '<label style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="hPb"> Dar baixa no estoque das peças escolhidas</label>'+
+    '<label>Tempo parado (min)</label><input id="hTp" class="f" inputmode="numeric">'+
     '<div class="btns"><button class="btn p" id="hS">Salvar</button></div><div class="note">Sem internet, o registro fica guardado e é enviado depois.</div>');
+  let pcsEsc=[];$('#hPl').onclick=()=>escolhePecas($('#hP'),L=>{L.forEach(x=>{const k=pcsEsc.find(y=>y.id===x.id);if(k)k.q+=x.q;else pcsEsc.push(x);});$('#hPb').checked=true;});
+  const ehPrev=()=>$('#hT').value==='Preventiva'||$('#pvOpt').checked;
+  const tarefasDo=()=>{const t=tagDoEquip($('#hE').value);return t?m.linhas.filter(r=>String(v(m,r,'Equipamento')).trim()===t):[];};
+  const tarefaSel=()=>{const id=$('#pvSel').value;return id?m.linhas.find(r=>String(r[0])===id):null;};
+  const msg=()=>{const n=$('#pvN').value;$('#pvMsg').innerHTML=n?'Próxima preventiva: <b>'+esc(dataBR(n))+'</b>'+(num($('#pvD').value)?' (a cada '+num($('#pvD').value)+' dias)':''):'Informe os dias ou a data da próxima.';};
+  const daDias=()=>{const d=num($('#pvD').value);$('#pvN').value=d>0?addDias($('#hD').value,d):'';msg();};
+  const daData=()=>{const n=$('#pvN').value;if(n){const d=difDias($('#hD').value||hoje(),n);$('#pvD').value=d>0?d:'';}msg();};
+  const preenche=()=>{const r=tarefaSel();$('#pvNova').hidden=!!r;
+    if(r){$('#pvD').value=v(m,r,'Dias');$('#pvR').value=v(m,r,'Responsável');if(!$('#hDf').value.trim())$('#hDf').value=v(m,r,'Tarefa','Atividade','Descrição');const t=v(m,r,'Tipo');if(TIPO_ORD.indexOf(t)>=0)$('#hA').value=t;}
+    else{$('#pvR').value=$('#pvR').value||'';}
+    daDias();};
+  const montaSel=()=>{const T=tarefasDo();const ant=$('#pvSel').value;
+    $('#pvSel').innerHTML='<option value="">+ Nova tarefa para este equipamento</option>'+T.map(r=>'<option value="'+esc(r[0])+'">'+esc(r[0]+' · '+v(m,r,'Tarefa','Atividade','Descrição')+(v(m,r,'Periodicidade')?' ('+v(m,r,'Periodicidade')+')':''))+'</option>').join('');
+    if(T.some(r=>String(r[0])===ant))$('#pvSel').value=ant;preenche();};
+  const modo=()=>{$('#pvOptL').hidden=$('#hT').value==='Preventiva';$('#pvBox').hidden=!ehPrev();$('#hDfL').textContent=ehPrev()?'Serviço realizado':'Defeito / serviço';if(ehPrev())montaSel();};
+  $('#hT').onchange=modo;$('#hE').addEventListener('input',()=>{if(ehPrev())montaSel();});$('#hE').addEventListener('change',()=>{if(ehPrev())montaSel();});
+  $('#pvOpt').onchange=modo;ligaChips('pvCh',$('#pvD'),(d,t)=>{daDias();if(!tarefaSel()&&!$('#pvP').value.trim())$('#pvP').value=t==='1 semana'?'Semanal':t;});
+  $('#pvD').addEventListener('input',()=>{});
+  $('#pvSel').onchange=()=>{preenche();$('#pvD').dispatchEvent(new Event('input'));};$('#pvD').addEventListener('input',daDias);$('#pvN').onchange=()=>{daData();$('#pvD').dispatchEvent(new Event('input'));};$('#hD').onchange=()=>{if(ehPrev())daDias();};
+  modo();
+  $('#hEl').onclick=()=>escolheEquip($('#hE'));
   $('#hS').onclick=async()=>{
-    if(!$('#hE').value.trim()||!$('#hDf').value.trim()){toast('Informe equipamento e defeito/serviço');return;}
-    await enfileira({tipo:'incluir',aba:'Histórico',prefixo:'H',campos:histCampos({data:$('#hD').value,tipo:$('#hT').value,equip:$('#hE').value.trim(),area:$('#hA').value,desc:$('#hDf').value.trim(),acao:$('#hAc').value.trim(),pecas:$('#hP').value.trim(),tempo:$('#hTp').value})});
-    toast('Registro salvo');fecha();renderLista();
+    const equip=$('#hE').value.trim(),data=$('#hD').value||hoje();
+    if(ehPrev()&&!$('#hDf').value.trim()&&!tarefaSel())$('#hDf').value=$('#pvX').value.trim();
+    if(!equip||!$('#hDf').value.trim()){toast(ehPrev()?'Informe equipamento e serviço/tarefa':'Informe equipamento e defeito/serviço');return;}
+    let idT='';
+    if(ehPrev()){
+      const dias=num($('#pvD').value);if($('#pvD').value.trim()&&!(dias>0)){toast('Dias deve ser um número maior que zero');return;}
+      const r=tarefaSel(),resp=$('#pvR').value.trim();
+      if(r){idT=String(r[0]);const campos={[hdr(m,'Última execução','Última')]:data};
+        if(dias>0&&String(dias)!==String(v(m,r,'Dias')))campos[hdr(m,'Dias')]=dias;if(resp!==String(v(m,r,'Responsável')))campos[hdr(m,'Responsável')]=resp;
+        await enfileira({tipo:'atualizar',aba:MN,id:idT,campos});}
+      else{const tx=$('#pvX').value.trim()||$('#hDf').value.trim();
+        if(!dias){toast('Informe os dias (ou a data da próxima) para programar a preventiva');return;}
+        idT=proxIdMN();const campos={[m.cab[0]||'ID']:idT,[hdr(m,'Equipamento')]:tagDoEquip(equip),[hdr(m,'Tipo')]:$('#hA').value,[hdr(m,'Tarefa')]:tx,[hdr(m,'Dias')]:dias,[hdr(m,'Última execução','Última')]:data};
+        const g=$('#pvG').value.trim(),pe=$('#pvP').value.trim();if(g)campos[hdr(m,'Grupo')]=g;campos[hdr(m,'Periodicidade')]=pe||('A cada '+dias+' dias');if(resp)campos[hdr(m,'Responsável')]=resp;
+        await enfileira({tipo:'incluir',aba:MN,prefixo:'MP',campos});}
+    }
+    if($('#hPb').checked&&pcsEsc.length&&$('#hP').value.trim())for(const x of pcsEsc)await enfileira({tipo:'somar',aba:'Peças',id:x.id,campos:{'Estoque atual':-x.q}});
+    await enfileira({tipo:'incluir',aba:'Histórico',prefixo:'H',campos:histCampos({data,tipo:$('#hT').value,equip,area:$('#hA').value,desc:$('#hDf').value.trim(),tarefa:idT,acao:$('#hAc').value.trim(),pecas:$('#hP').value.trim(),tempo:$('#hTp').value})});
+    toast(ehPrev()&&$('#pvN').value?'Salvo · próxima em '+dataBR($('#pvN').value):'Registro salvo');fecha();renderLista();
   };
 }
 /* ---- Compras ---- */
