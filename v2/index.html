@@ -137,6 +137,24 @@ textarea.f{min-height:70px}
 .eqtag{flex:none;min-width:78px;font-family:ui-monospace,Consolas,monospace;font-weight:700;font-size:12.5px;color:var(--ac);background:var(--ac2);border-radius:8px;padding:6px 6px;text-align:center;align-self:flex-start}
 .pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:6px;background:var(--bg);border:1px solid var(--ln);margin:4px 4px 0 0;color:var(--mu)}.pill b{color:var(--fg)}.pill.ok{background:var(--ac2);border-color:transparent;color:var(--ac)}.pill.w{background:var(--wa2);border-color:transparent;color:var(--wa)}
 .esqv{position:fixed;inset:0;z-index:45;background:var(--bg);display:flex;flex-direction:column}
+/* mapa de iluminação */
+body.mapon{overflow:hidden}body.mapon #sheet,body.mapon #toast{z-index:60}body.mapon #eqPick{z-index:65}
+.mpin{position:relative;width:100%;transform-origin:0 0}.mpin img{width:100%;display:block;user-select:none;-webkit-user-drag:none}
+.mpin.add{cursor:crosshair}
+.lp{position:absolute;transform:translate(-50%,-50%);min-width:24px;height:24px;padding:0 4px;border-radius:12px;border:2px solid #1c1c1e;background:#fff;color:#1c1c1e;font:700 11px/20px system-ui;text-align:center;cursor:pointer;z-index:2}
+.lp.n1{background:#FACC15}.lp.n2{background:#F97316;color:#fff}.lp.n3{background:#DC2626;color:#fff;border-color:#7f1d1d}
+.lp.ag{outline:3px dashed #2F5DA8;outline-offset:2px}.lp.sel{box-shadow:0 0 0 4px rgba(227,95,10,.6)!important}
+.lp.off{opacity:.45}
+.fe{position:absolute;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:5px;opacity:.9;color:#fff;font:700 11px/18px system-ui;text-align:center;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);pointer-events:none;z-index:1}
+.fe.C{background:#E35F0A}.fe.S{background:#B42318}.fe.R{background:#2F5DA8}
+.mpbar{display:flex;gap:6px;overflow-x:auto;padding:6px 10px;border-bottom:1px solid var(--ln);align-items:center;background:var(--sf)}
+.mpbar .chip{flex:none}
+.mppan{max-height:38vh;overflow:auto;border-top:1px solid var(--ln);background:var(--sf);padding:8px 12px}
+.mppan.min{max-height:none}.mppan.min .mpcorpo{display:none}
+.rk{display:grid;grid-template-columns:minmax(90px,1fr) 2fr auto;gap:6px;align-items:center;font-size:13px;margin:3px 0}
+.rk i{display:block;height:10px;border-radius:5px;background:#F97316}
+.mpleg{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--mu);margin:4px 0}.mpleg span{display:inline-flex;align-items:center;gap:4px}.mpleg b{display:inline-block;width:12px;height:12px;border-radius:6px;border:2px solid #1c1c1e}
+
 body.esqon{overflow:hidden}
 .esqh{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--ln);background:var(--sf)}
 .esqh .btn{padding:7px 11px;margin:0}
@@ -162,7 +180,7 @@ body.esqon{overflow:hidden}
 #print{display:none}
 @media print{
   body{background:#fff!important;color:#000!important}
-  #vApp,#vLogin,#sheet,#zoom,#toast,.fab,.selbar,#esqV{display:none!important}
+  #vApp,#vLogin,#sheet,#zoom,#toast,.fab,.selbar,#esqV,#mapV{display:none!important}
   #print{display:block!important;font:12px/1.35 Arial,Helvetica,sans-serif;color:#000}
   #print h1{font-size:18px;margin:0 0 2px}
   #print .meta{font-size:11px;color:#333;margin-bottom:10px}
@@ -329,6 +347,7 @@ function aplicaLocal(op){
   if(op.tipo==='imagem'){S.img[op.imgKey]=op.b64;put('img',op.imgKey,op.b64);return;}
   if(op.tipo==='config'){if(!S.d.abas[CFG_AB])S.d.abas[CFG_AB]={cab:['Chave','Valor','Alterado por / em'],linhas:[]};const c=S.d.abas[CFG_AB];const i=c.linhas.findIndex(x=>String(x[0])===op.chave);if(op.valor===''||op.valor==null){if(i>=0)c.linhas.splice(i,1);}else if(i>=0)c.linhas[i][1]=op.valor;else c.linhas.push([op.chave,op.valor,'']);return;}
   if(op.tipo==='excluir'&&op.aba==='imagens_app'){delete S.img[op.id];del('img',op.id);if(S.d.imgApp){const k=S.d.imgApp.indexOf(op.id);if(k>=0)S.d.imgApp.splice(k,1);}return;}
+  if(op.aba===PT_AB&&!(S.d.abas[PT_AB]&&S.d.abas[PT_AB].cab.length))S.d.abas[PT_AB]={cab:PT_CAB.slice(),linhas:[]};
   if(op.aba===FT_AB&&!(S.d.abas[FT_AB]&&S.d.abas[FT_AB].cab.length))S.d.abas[FT_AB]={cab:['ID','Aba','Registro','Legenda','Data','Por'],linhas:[]};
   const a=aba(op.aba); if(!a.cab.length) return;
   if(op.tipo==='excluir'){const i=op.id!=null&&op.id!==''?a.linhas.findIndex(x=>String(x[0])===String(op.id)):(op.idx!=null?op.idx:-1);if(i>=0&&i<a.linhas.length)a.linhas.splice(i,1);return;}
@@ -843,11 +862,11 @@ function lManutLed(V,seg){
   const a=aba(LED_AB);const mSel=S.chip?manutMesCod(S.chip):'';
   const L=a.linhas.filter(r=>(!mSel||ledMesDa(a,r)===mSel)&&busca(r.join(' '))).slice().reverse();
   const tot=L.reduce((s,r)=>s+(num(v(a,r,'Qtd'))||1),0);const set={};L.forEach(r=>{const k=v(a,r,'Setor')||'—';set[k]=1;});
-  V.innerHTML=seg+'<div class="btns" style="margin:6px 0 0"><button class="btn" id="rPdf">📄 PDF do mês</button><button class="btn" id="rMail">✉️ Enviar ao administrador</button><span class="note" style="align-self:center">'+esc(S.chip||('mês atual: '+mesNome(hoje().slice(0,7))))+'</span></div>'+
+  V.innerHTML=seg+'<div class="btns" style="margin:6px 0 0"><button class="btn" id="rMapa">🗺️ Mapa de iluminação</button><button class="btn" id="rPdf">📄 PDF do mês</button><button class="btn" id="rMail">✉️ Enviar ao administrador</button><span class="note" style="align-self:center">'+esc(S.chip||('mês atual: '+mesNome(hoje().slice(0,7))))+'</span></div>'+
     '<div class="sum"><div><b>'+tot+'</b><span>refletores trocados'+(S.chip?' em '+esc(S.chip):'')+'</span></div><div><b>'+L.length+'</b><span>registros</span></div><div><b>'+Object.keys(set).length+'</b><span>setores</span></div></div>'+
     (L.length?'<div class="list">'+L.slice(0,S.lim).map(r=>'<button class="card" data-l="'+esc(r[0])+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Setor')||'(sem setor)')+'</div><div style="font-size:14px;margin-top:2px">'+esc([v(a,r,'Refletor')?'Refletor '+v(a,r,'Refletor'):'',v(a,r,'Potência')?v(a,r,'Potência')+' W':'',v(a,r,'Motivo')].filter(Boolean).join(' · '))+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+(v(a,r,'Respons')?' · '+esc(v(a,r,'Respons')):'')+(v(a,r,'Observ')?' · '+esc(v(a,r,'Observ')):'')+'</div></div><div class="rt"><span class="tag">LED</span><div class="cm">'+esc(v(a,r,'Qtd')||'1')+' un</div>'+nFotos(LED_AB,r)+'</div></button>').join('')+'</div>'+mais(L.length)
       :'<div class="empty">Nenhuma troca de LED'+(S.chip?' em '+esc(S.chip):'')+'.'+(podeLancar()?'<br>Toque em <b>+ Troca</b> para registrar.':'')+'</div>');
-  $('#rPdf').onclick=()=>pdfManut(mSel||hoje().slice(0,7));
+  $('#rMapa').onclick=()=>abreMapa();$('#rPdf').onclick=()=>pdfManut(mSel||hoje().slice(0,7));
   $('#rMail').onclick=()=>emailManut(mSel||hoje().slice(0,7));
   V.onclick=e=>{const t=e.target.closest('[data-ma]');if(t){S.mAba=t.dataset.ma;S.lim=40;render();return;}const c=e.target.closest('[data-l]');if(c)formLed(c.dataset.l);};
 }
@@ -1504,14 +1523,14 @@ function lLed(V){
   const L=a.linhas.filter(r=>mesNome(ledMesDa(a,r))===sel&&busca(r.join(' ')));
   const tot=L.reduce((s,r)=>s+(num(v(a,r,'Qtd'))||1),0);
   const set={};L.forEach(r=>{const k=v(a,r,'Setor')||'—';set[k]=(set[k]||0)+(num(v(a,r,'Qtd'))||1);});
-  V.innerHTML='<div class="sum"><div><b>'+tot+'</b><span>refletores trocados</span></div><div><b>'+L.length+'</b><span>registros</span></div><div><b>'+Object.keys(set).length+'</b><span>setores</span></div></div>'+
+  V.innerHTML='<button class="aviso" id="ledMapa" style="background:var(--sf);color:inherit;border-color:var(--ln)">🗺️<span><b style="color:var(--ac)">Mapa de iluminação</b> — pontos dos refletores, trocas por região e agendamentos</span></button><div class="sum"><div><b>'+tot+'</b><span>refletores trocados</span></div><div><b>'+L.length+'</b><span>registros</span></div><div><b>'+Object.keys(set).length+'</b><span>setores</span></div></div>'+
     (L.length?'<div class="note">'+Object.keys(set).sort().map(k=>esc(k)+': '+set[k]).join(' · ')+'</div>':'')+
     '<div class="bar"><span>'+esc(sel)+'</span>'+(L.length?'<button class="lnk" id="ledPdf">PDF do mês</button>':'')+'</div>'+
     (L.length?'<div class="list">'+L.slice().reverse().map(r=>'<button class="card" data-l="'+esc(r[0])+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Setor'))+(v(a,r,'Refletor')?' · '+esc(v(a,r,'Refletor')):'')+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+' · '+esc(v(a,r,'Motivo'))+(v(a,r,'Potência')?' · '+esc(v(a,r,'Potência'))+' W':'')+'</div><div class="cm">'+esc(v(a,r,'Respons'))+'</div></div><div class="rt">'+esc(v(a,r,'Qtd')||'1')+'<div class="cm">un</div></div></button>').join('')+'</div>':'<div class="empty">Nenhuma troca registrada em '+esc(sel)+'.<br>Toque em <b>+ Troca</b>.</div>');
-  V.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>formLed(b.dataset.l));
+  V.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>formLed(b.dataset.l));$('#ledMapa').onclick=()=>abreMapa();
   const pb=$('#ledPdf');if(pb)pb.onclick=()=>pdfLed(sel,L);
 }
-function formLed(id){
+function formLed(id,pre){pre=pre||{};
   if(!podeLancar()){toast('Seu usuário é só de consulta');return;}
   if(id&&!isAdm()){const a0=aba(LED_AB);const r0=a0.linhas.find(x=>String(x[0])===String(id));if(r0)abre('<div class="ph"><b>Troca '+esc(id)+'</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a0.cab.map((c,i)=>r0[i]!==''?'<b>'+esc(c)+'</b><span>'+esc(r0[i])+'</span>':'').join('')+'</div><div class="note">Só o administrador edita ou exclui registros.</div>'+blocoFotos(LED_AB,r0));ligaFotos(LED_AB,r0,()=>formLed(id));return;}
   const a=aba(LED_AB);const r=id?a.linhas.find(x=>String(x[0])===String(id)):null;
@@ -1521,11 +1540,13 @@ function formLed(id){
   abre('<div class="ph"><b>'+(r?'Troca '+esc(id):'Nova troca de refletor')+'</b><button class="lnk" data-x>Fechar</button></div>'+
     '<div class="two"><div><label>Data da troca</label><input id="lD" class="f" type="date" value="'+esc(dIso)+'"></div><div><label>Qtd</label><input id="lQ" class="f" inputmode="numeric" value="'+esc(g('Qtd')||'1')+'"></div></div>'+
     '<label>Setor / local</label><input id="lS" class="f" list="dlLS" value="'+esc(g('Setor'))+'" placeholder="ex.: Sala de abate – teto"><datalist id="dlLS">'+setores.map(e=>'<option value="'+esc(e)+'">').join('')+'</datalist>'+
-    '<div class="two"><div><label>Refletor (identificação)</label><input id="lR" class="f" value="'+esc(g('Refletor'))+'" placeholder="ex.: R-12"></div><div><label>Potência (W)</label><input id="lP" class="f" inputmode="numeric" value="'+esc(g('Potência'))+'"></div></div>'+
+    '<div class="two"><div><label>Refletor (ponto no mapa)</label><input id="lR" class="f" list="dlLR" value="'+esc(g('Refletor')||pre.ponto||'')+'" placeholder="ex.: R012"><datalist id="dlLR">'+pontos().map(p=>'<option value="'+esc(p.id)+'">'+esc(p.reg+(p.desc?' · '+p.desc:''))+'</option>').join('')+'</datalist></div><div><label>Potência (W)</label><input id="lP" class="f" inputmode="numeric" value="'+esc(g('Potência'))+'"></div></div>'+
     '<label>Motivo</label><select id="lM" class="f">'+['Queimado','Oscilando / piscando','Dano físico','Infiltração / umidade','Preventiva','Outro'].map(o=>'<option'+(g('Motivo')===o?' selected':'')+'>'+o+'</option>').join('')+'</select>'+
     '<label>Observação</label><input id="lO" class="f" value="'+esc(g('Observação'))+'">'+
     '<div class="btns"><button class="btn p" id="lSv">Salvar</button>'+(r?'<button class="btn" id="lDl" style="color:var(--cr)">🗑️ Excluir</button>':'')+'</div><div class="note">O mês é preenchido automaticamente pela data.'+(r?'':' Depois de salvar, abra o registro para anexar fotos.')+'</div>'+(r?blocoFotos(LED_AB,r):''));
   if(r)ligaFotos(LED_AB,r,()=>formLed(id));
+  {const pp=()=>{const p=pontos().find(x=>x.id.toUpperCase()===$('#lR').value.trim().toUpperCase());if(!p)return;if(!$('#lS').value.trim())$('#lS').value=p.reg;if(!$('#lP').value.trim()&&p.pot)$('#lP').value=p.pot;};$('#lR').addEventListener('change',pp);$('#lR').addEventListener('input',pp);if(pre.ponto)pp();
+   const b=document.createElement('button');b.type='button';b.className='btn';b.textContent='🗺️ Escolher no mapa';b.style.marginTop='6px';b.onclick=()=>{fecha();abreMapa($('#lR').value.trim()||null);toast('Toque no refletor e depois em "Registrar troca"');};$('#lR').closest('.two').after(b);}
   const ld=$('#lDl');if(ld)ld.onclick=()=>excluirLinha(LED_AB,r,'a troca '+id);
   $('#lSv').onclick=async()=>{
     const d=$('#lD').value||hoje();
@@ -1533,7 +1554,7 @@ function formLed(id){
     if(!c['Setor / local']){toast('Informe o setor / local');return;}
     if(r) await enfileira({tipo:'atualizar',aba:LED_AB,id,campos:c});
     else { c.ID='LED'+String(Date.now()).slice(-6); c['Responsável']=S.user.nome; await enfileira({tipo:'incluir',aba:LED_AB,campos:c}); }
-    toast('Troca registrada em '+mesNome(c['Mês']));fecha();S.chip=mesNome(c['Mês']);render();
+    toast('Troca registrada em '+mesNome(c['Mês']));fecha();if($('#mapV')&&!$('#mapV').hidden){mapaDesenha();if(pre.ponto)detPonto(pre.ponto);return;}S.chip=mesNome(c['Mês']);render();
   };
 }
 function pdfLed(mes,L){
@@ -1542,6 +1563,149 @@ function pdfLed(mes,L){
     '<table><thead><tr><th>Data</th><th>Setor / local</th><th>Refletor</th><th>W</th><th>Qtd</th><th>Motivo</th><th>Responsável</th><th>Obs.</th></tr></thead><tbody>'+
     L.map(r=>'<tr><td>'+esc(br(v(a,r,'Data')))+'</td><td>'+esc(v(a,r,'Setor'))+'</td><td>'+esc(v(a,r,'Refletor'))+'</td><td>'+esc(v(a,r,'Potência'))+'</td><td>'+esc(v(a,r,'Qtd'))+'</td><td>'+esc(v(a,r,'Motivo'))+'</td><td>'+esc(v(a,r,'Respons'))+'</td><td>'+esc(v(a,r,'Observ'))+'</td></tr>').join('')+'</tbody></table>';
   pdfAbrir('Refletores_LED_'+mes.replace('/','_'));
+}
+
+
+/* ================= MAPA DE ILUMINAÇÃO (planta da evisceração, pontos de refletores) ================= */
+const PT_AB='Pontos iluminação';
+const PT_CAB=['ID','Mapa','Região','Descrição','X (%)','Y (%)','Potência (W)','Qtd','Ativo','Observação'];
+const MAPAS=[{id:'EVISC',nome:'Evisceração',sub:'Layout 80387 · ZLB 001',src:'mapas/evisceracao.png',w:3400,h:2202}];
+const ETAPAS_EVISC=[[1, "C", "Início da carga", 24.29, 13.39], [2, "C", "Descida lateral esquerda", 17.35, 22.32], [3, "C", "Linha principal de carga", 54.95, 31.43], [4, "C", "Descida lateral direita", 91.96, 55.36], [5, "C", "Acionamento principal", 90.23, 86.43], [6, "C", "Trecho inferior e subida", 82.13, 80.8], [7, "C", "Trecho elevado", 74.61, 72.77], [8, "C", "Chaves de desvio 2R / 2L", 65.64, 76.79], [9, "C", "Linha inferior de carga", 47.43, 79.02], [10, "S", "Transpasse de saída", 13.59, 79.02], [11, "R", "Retorno inferior", 26.03, 85.27], [12, "R", "Subida central do retorno", 38.87, 53.57], [13, "R", "Acionamento do retorno", 39.91, 17.41], [14, "R", "Esticador pneumático", 49.74, 14.73], [15, "R", "Retorno superior", 41.64, 13.21]];
+const MP_PER=[['30','30 dias'],['90','90 dias'],['365','12 meses'],['0','Tudo']];
+function pfc(x){const n=parseFloat(String(x==null?'':x).trim().replace(',','.'));return isNaN(n)?50:Math.max(0,Math.min(100,n));}
+function pontos(){const a=aba(PT_AB);return a.linhas.map(r=>({id:String(r[0]),mapa:v(a,r,'Mapa')||'EVISC',reg:v(a,r,'Região'),desc:v(a,r,'Descrição'),x:pfc(v(a,r,'X')),y:pfc(v(a,r,'Y')),pot:v(a,r,'Potência'),qtd:v(a,r,'Qtd')||'1',ativo:!/^n/i.test(v(a,r,'Ativo')||'Sim'),obs:v(a,r,'Observação'),r}));}
+function trocasDe(id,dias){const a=aba(LED_AB);const lim=dias>0?addDias(hoje(),-dias):'';return a.linhas.filter(r=>String(v(a,r,'Refletor')).trim().toUpperCase()===String(id).toUpperCase()&&(!lim||isoDe(v(a,r,'Data'))>=lim));}
+function qtdTrocas(L){const a=aba(LED_AB);return L.reduce((s_,r)=>s_+(num(v(a,r,'Qtd'))||1),0);}
+function tarefaPonto(id){const a=aba(MN);return a.linhas.find(r=>norm(v(a,r,'Equipamento'))==='iluminacao'&&new RegExp('\\b'+id+'\\b','i').test(v(a,r,'Tarefa')));}
+function regioesIlum(){const s_=new Set();pontos().forEach(p=>p.reg&&s_.add(p.reg));const a=aba(LED_AB);a.linhas.forEach(r=>{const x=v(a,r,'Setor');if(x)s_.add(x);});return [...s_].sort((x,y)=>x.localeCompare(y,'pt'));}
+function mapaUI(){
+  let el=$('#mapV');if(el)return el;
+  el=document.createElement('div');el.id='mapV';el.className='esqv';el.hidden=true;
+  el.innerHTML='<div class="esqh"><button class="btn" id="mpX" aria-label="Fechar">✕</button><div class="esqt"><b id="mpTi">Mapa de iluminação</b><span id="mpSu"></span></div>'+
+    '<div class="esqn"><button class="btn" id="mpZm" aria-label="Diminuir">−</button><button class="btn" id="mpZp" aria-label="Aumentar">+</button><button class="btn" id="mpAdd" hidden>+ Ponto</button></div></div>'+
+    '<div class="mpbar" id="mpBar"></div>'+
+    '<div id="mpBox" class="esqbox"><div id="mpIn" class="mpin"><img id="mpImg" alt="Planta da área com os pontos de iluminação"><div id="mpFl"></div><div id="mpPt"></div></div></div>'+
+    '<div class="mppan" id="mpPan"></div>';
+  document.body.appendChild(el);
+  const M=S.mapa={z:1,per:'365',fluxo:false,modo:'',sel:null,mapa:MAPAS[0]};
+  $('#mpX').onclick=()=>{el.hidden=true;document.body.classList.remove('mapon');M.modo='';};
+  $('#mpZp').onclick=()=>mapaZoom(M.z*1.5);$('#mpZm').onclick=()=>mapaZoom(M.z/1.5);
+  $('#mpAdd').onclick=()=>{M.modo=M.modo==='add'?'':'add';mapaDesenha();if(M.modo)toast('Toque na planta onde fica o refletor');};
+  $('#mpBar').onclick=e=>{const b=e.target.closest('[data-per]');if(b){M.per=b.dataset.per;mapaDesenha();return;}if(e.target.closest('#mpFx')){M.fluxo=!M.fluxo;mapaDesenha();}};
+  $('#mpIn').onclick=e=>{
+    const p_=e.target.closest('.lp');
+    if(p_&&!M.modo){detPonto(p_.dataset.pt);return;}
+    if(!M.modo)return;
+    const r=$('#mpIn').getBoundingClientRect();const x=+((e.clientX-r.left)/r.width*100).toFixed(2),y=+((e.clientY-r.top)/r.height*100).toFixed(2);
+    if(M.modo==='add'){M.modo='';formPonto(null,{x,y});mapaDesenha();}
+    else if(M.modo.startsWith('mv:')){const id=M.modo.slice(3);M.modo='';enfileira({tipo:'atualizar',aba:PT_AB,id,campos:{'X (%)':String(x),'Y (%)':String(y)},admin:true}).then(()=>{toast('Ponto '+id+' movido');mapaDesenha();});}
+  };
+  $('#mpPan').onclick=e=>{const t=e.target.closest('[data-pt]');if(t){detPonto(t.dataset.pt);return;}if(e.target.closest('#mpMin')){$('#mpPan').classList.toggle('min');}};
+  /* pinça para zoom */
+  const box=$('#mpBox');let d0=0,z0=1;
+  box.addEventListener('touchstart',e=>{if(e.touches.length===2){d0=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);z0=M.z;}},{passive:true});
+  box.addEventListener('touchmove',e=>{if(e.touches.length===2&&d0){e.preventDefault();const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);mapaZoom(z0*d/d0);}},{passive:false});
+  box.addEventListener('touchend',()=>{d0=0;});
+  box.addEventListener('wheel',e=>{if(e.ctrlKey){e.preventDefault();mapaZoom(M.z*(e.deltaY<0?1.15:1/1.15));}},{passive:false});
+  return el;
+}
+function mapaZoom(z){const M=S.mapa;const box=$('#mpBox');const cx=(box.scrollLeft+box.clientWidth/2)/box.scrollWidth,cy=(box.scrollTop+box.clientHeight/2)/box.scrollHeight;
+  M.z=Math.max(1,Math.min(8,z));$('#mpIn').style.width=(M.z*100)+'%';
+  box.scrollLeft=cx*box.scrollWidth-box.clientWidth/2;box.scrollTop=cy*box.scrollHeight-box.clientHeight/2;}
+function abreMapa(sel){
+  const el=mapaUI();const M=S.mapa;el.hidden=false;document.body.classList.add('mapon');
+  const img=$('#mpImg');if(img.getAttribute('src')!==M.mapa.src)img.src=M.mapa.src;
+  M.sel=sel||null;mapaDesenha();
+  if(!M.ajust){M.ajust=1;requestAnimationFrame(()=>{const box=$('#mpBox');const zh=box.clientHeight/(box.clientWidth*M.mapa.h/M.mapa.w);if(zh>1.05)mapaZoom(Math.min(zh,3));});}
+  if(sel){const p_=pontos().find(x=>x.id===sel);if(p_){mapaZoom(3);setTimeout(()=>{const box=$('#mpBox');box.scrollLeft=p_.x/100*box.scrollWidth-box.clientWidth/2;box.scrollTop=p_.y/100*box.scrollHeight-box.clientHeight/2;},60);}}
+}
+function mapaDesenha(){
+  const M=S.mapa;if(!M||$('#mapV').hidden)return;const adm=isAdm()&&podeLancar();const dias=+M.per;
+  $('#mpAdd').hidden=!adm;$('#mpAdd').textContent=M.modo==='add'?'Cancelar':'+ Ponto';$('#mpIn').classList.toggle('add',!!M.modo);
+  $('#mpTi').textContent='Mapa de iluminação · '+M.mapa.nome;
+  const P=pontos().filter(p=>p.mapa===M.mapa.id);
+  const C={};P.forEach(p=>C[p.id]=qtdTrocas(trocasDe(p.id,dias)));
+  const ag={};const pr=proximas();P.forEach(p=>{const t=tarefaPonto(p.id);if(t){const x=pr.find(q=>q.id===String(t[0]));if(x&&x.falta<=AVISO_DIAS)ag[p.id]=x;}});
+  $('#mpSu').textContent=P.length+' ponto'+(P.length===1?'':'s')+' · '+M.mapa.sub+(M.modo==='add'?' · toque na planta para criar o ponto':M.modo.startsWith('mv:')?' · toque no novo local do ponto '+M.modo.slice(3):'');
+  $('#mpBar').innerHTML=MP_PER.map(([k,t])=>'<button class="chip" data-per="'+k+'" aria-pressed="'+(M.per===k)+'">'+t+'</button>').join('')+'<button class="chip" id="mpFx" aria-pressed="'+M.fluxo+'">🔁 Fluxo da linha</button>';
+  $('#mpFl').innerHTML=M.fluxo?ETAPAS_EVISC.map(([n,t,ti,x,y])=>'<div class="fe '+t+'" style="left:'+x+'%;top:'+y+'%" title="'+esc(ti)+'">'+n+'</div>').join(''):'';
+  $('#mpPt').innerHTML=P.map(p=>{const n=C[p.id];const cl=n>=3?'n3':n===2?'n2':n===1?'n1':'';const halo=n?'box-shadow:0 0 0 '+(4+Math.min(n,8)*4)+'px rgba(220,38,38,'+(0.12+Math.min(n,8)*0.03)+')':'';
+    return '<div class="lp '+cl+(ag[p.id]?' ag':'')+(p.ativo?'':' off')+(M.sel===p.id?' sel':'')+'" data-pt="'+esc(p.id)+'" style="left:'+p.x+'%;top:'+p.y+'%;'+halo+'" title="'+esc(p.id+' · '+p.reg+(n?' · '+n+' troca(s)':''))+'">'+esc(p.id.replace(/^R0*/,'R'))+'</div>';}).join('');
+  /* painel: ranking por região e pontos mais trocados */
+  const per=MP_PER.find(x=>x[0]===M.per)[1];
+  const reg={};P.forEach(p=>{const k=p.reg||'(sem região)';reg[k]=reg[k]||{t:0,p:0};reg[k].t+=C[p.id];reg[k].p++;});
+  const RK=Object.entries(reg).sort((a_,b_)=>b_[1].t-a_[1].t);const max=Math.max(1,...RK.map(x=>x[1].t));
+  const tot=P.reduce((s_,p)=>s_+C[p.id],0);
+  const a=aba(LED_AB);const ids=new Set(P.map(p=>p.id.toUpperCase()));const lim=dias>0?addDias(hoje(),-dias):'';
+  const semPonto=a.linhas.filter(r=>(!lim||isoDe(v(a,r,'Data'))>=lim)&&!ids.has(String(v(a,r,'Refletor')).trim().toUpperCase()));
+  const top=P.filter(p=>C[p.id]).sort((x,y)=>C[y.id]-C[x.id]).slice(0,6);
+  const agL=Object.keys(ag);
+  $('#mpPan').innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><b>Trocas · '+esc(per)+': '+tot+'</b><button class="lnk" id="mpMin">Mostrar/ocultar</button></div><div class="mpcorpo">'+
+    '<div class="mpleg"><span><b style="background:#fff"></b>0</span><span><b style="background:#FACC15"></b>1 troca</span><span><b style="background:#F97316"></b>2</span><span><b style="background:#DC2626"></b>3 ou mais</span><span><b style="background:#fff;outline:2px dashed #2F5DA8"></b>manutenção em até '+AVISO_DIAS+' dias</span></div>'+
+    (P.length?'':'<div class="note">Nenhum ponto cadastrado ainda.'+(isAdm()?' Toque em <b>+ Ponto</b> e depois na planta, onde fica cada refletor.':' O administrador cadastra os pontos.')+'</div>')+
+    (agL.length?'<div class="note" style="color:#2F5DA8">🗓️ Manutenção próxima: '+agL.map(id=>'<button class="lnk" data-pt="'+esc(id)+'">'+esc(id)+'</button> ('+esc(faltaTxt(ag[id].falta))+')').join(', ')+'</div>':'')+
+    (RK.length?'<div class="grp" style="margin-top:6px">Regiões mais afetadas</div>'+RK.map(([k,o])=>'<div class="rk"><span>'+esc(k)+'</span><i style="width:'+(o.t/max*100)+'%;opacity:'+(o.t?1:.15)+'"></i><b>'+o.t+'</b></div>').join(''):'')+
+    (top.length?'<div class="grp" style="margin-top:6px">Refletores com mais trocas</div><div>'+top.map(p=>'<button class="chip" data-pt="'+esc(p.id)+'">'+esc(p.id)+' · '+esc(p.reg||'—')+' · <b>'+C[p.id]+'</b></button>').join(' ')+'</div>':'')+
+    (semPonto.length?'<div class="note" style="margin-top:6px">'+semPonto.length+' troca(s) no período sem ponto no mapa (campo "Refletor" vazio ou diferente do ID do ponto).</div>':'')+'</div>';
+}
+function formPonto(id,pos){
+  if(!isAdm()){toast('Só o administrador cadastra pontos');return;}
+  const p_=id?pontos().find(x=>x.id===id):null;const regs=regioesIlum();
+  const g=k=>p_?p_[k]:'';
+  abre('<div class="ph"><b>'+(p_?'Editar ponto '+esc(id):'Novo ponto de iluminação')+'</b><button class="lnk" data-x>Fechar</button></div>'+
+    (p_?'':'<div class="note">ID que será criado: <b>'+esc(proxIdPref(PT_AB,'R'))+'</b></div>')+
+    '<label>Região / setor *</label><input id="ptR" class="f" list="dlPtR" value="'+esc(g('reg'))+'" placeholder="ex.: Evisceração – plataforma da linha principal"><datalist id="dlPtR">'+regs.map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist>'+
+    '<label>Descrição do local</label><input id="ptD" class="f" value="'+esc(g('desc'))+'" placeholder="ex.: Teto, sobre a mesa de vísceras">'+
+    '<div class="two"><div><label>Potência (W)</label><input id="ptP" class="f" inputmode="numeric" value="'+esc(g('pot'))+'"></div><div><label>Qtd de luminárias</label><input id="ptQ" class="f" inputmode="numeric" value="'+esc(g('qtd')||'1')+'"></div></div>'+
+    (p_?'<label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="ptA"'+(p_.ativo?' checked':'')+'> Ponto ativo</label>':'')+
+    '<label>Observação</label><input id="ptO" class="f" value="'+esc(g('obs'))+'">'+
+    '<div class="btns"><button class="btn p" id="ptS">'+(p_?'Salvar':'Cadastrar ponto')+'</button></div>');
+  $('#ptS').onclick=async()=>{
+    const reg=$('#ptR').value.trim();if(!reg){toast('Informe a região / setor');return;}
+    const c={'Região':reg,'Descrição':$('#ptD').value.trim(),'Potência (W)':$('#ptP').value.trim(),'Qtd':$('#ptQ').value.trim()||'1','Observação':$('#ptO').value.trim()};
+    if(p_){c['Ativo']=$('#ptA').checked?'Sim':'Não';await enfileira({tipo:'atualizar',aba:PT_AB,id,campos:c,admin:true});toast('Ponto '+id+' salvo');fecha();}
+    else{const nid=proxIdPref(PT_AB,'R');Object.assign(c,{ID:nid,Mapa:S.mapa?S.mapa.mapa.id:'EVISC','X (%)':String(pos.x),'Y (%)':String(pos.y),'Ativo':'Sim'});await enfileira({tipo:'incluir',aba:PT_AB,campos:c,admin:true});toast('Ponto '+nid+' criado');fecha();if(S.mapa)S.mapa.sel=nid;}
+    mapaDesenha();renderLista();
+  };
+}
+function detPonto(id){
+  const p_=pontos().find(x=>x.id===id);if(!p_)return;if(S.mapa){S.mapa.sel=id;mapaDesenha();}
+  const a=aba(LED_AB);const L=trocasDe(id,0).slice().sort((x,y)=>isoDe(v(a,y,'Data')).localeCompare(isoDe(v(a,x,'Data'))));
+  const t=tarefaPonto(id);const m=aba(MN);const px=t?proximas().find(q=>q.id===String(t[0])):null;
+  const adm=isAdm()&&podeLancar();
+  abre('<div class="ph"><b>💡 Refletor '+esc(id)+'</b><button class="lnk" data-x>Fechar</button></div>'+
+    '<div class="kv"><b>Região</b><span>'+esc(p_.reg||'—')+'</span>'+(p_.desc?'<b>Local</b><span>'+esc(p_.desc)+'</span>':'')+(p_.pot?'<b>Potência</b><span>'+esc(p_.pot)+' W</span>':'')+'<b>Luminárias</b><span>'+esc(p_.qtd)+'</span>'+(p_.obs?'<b>Obs.</b><span>'+esc(p_.obs)+'</span>':'')+(p_.ativo?'':'<b>Situação</b><span>Inativo</span>')+
+    '<b>Trocas</b><span>'+qtdTrocas(L)+' no total · '+qtdTrocas(trocasDe(id,365))+' em 12 meses</span>'+
+    '<b>Manutenção</b><span>'+(px?esc(dataBR(px.prox))+' ('+esc(faltaTxt(px.falta))+')'+(t?' · a cada '+num(v(m,t,'Dias'))+' dias':''):'sem agendamento')+'</span></div>'+
+    (podeLancar()?'<div class="btns"><button class="btn p" id="pdTr">💡 Registrar troca</button><button class="btn" id="pdAg">🗓️ '+(t?'Alterar agendamento':'Agendar manutenção')+'</button></div>':'')+
+    (adm?'<div class="btns" style="margin-top:0"><button class="btn" id="pdEd">✏️ Editar</button><button class="btn" id="pdMv">📍 Mover</button><button class="btn" id="pdDl" style="color:var(--cr)">🗑️ Excluir</button></div>':'')+
+    '<div class="grp" style="margin-top:8px">Histórico de trocas · '+L.length+'</div>'+(L.length?'<div class="list">'+L.slice(0,30).map(r=>'<button class="card" data-l="'+esc(r[0])+'"><div class="ci"><div class="cd">'+esc(br(v(a,r,'Data')))+' · '+esc(v(a,r,'Motivo'))+'</div><div class="cm">'+esc(v(a,r,'Respons'))+(v(a,r,'Observação')?' · '+esc(v(a,r,'Observação')):'')+'</div></div><div class="rt">'+esc(v(a,r,'Qtd')||'1')+'<div class="cm">un</div></div></button>').join('')+'</div>':'<div class="note">Nenhuma troca registrada neste ponto.</div>'));
+  $('#pane').querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>formLed(b.dataset.l));
+  if($('#pdTr')){$('#pdTr').onclick=()=>formLed(null,{ponto:id});$('#pdAg').onclick=()=>formAgendaPonto(id);}
+  if(adm){$('#pdEd').onclick=()=>formPonto(id);$('#pdMv').onclick=()=>{fecha();if(!S.mapa||$('#mapV').hidden)abreMapa(id);S.mapa.modo='mv:'+id;mapaDesenha();toast('Toque no novo local do ponto '+id);};
+    $('#pdDl').onclick=async()=>{if(!confirmar('Excluir o ponto '+id+' do mapa? As trocas já registradas continuam no histórico.'))return;await enfileira({tipo:'excluir',aba:PT_AB,id,admin:true});toast('Ponto excluído');fecha();if(S.mapa)S.mapa.sel=null;mapaDesenha();};}
+}
+function formAgendaPonto(id){
+  const p_=pontos().find(x=>x.id===id);if(!p_)return;const m=aba(MN);const t=tarefaPonto(id);
+  abre('<div class="ph"><b>🗓️ Manutenção do refletor '+esc(id)+'</b><button class="lnk" data-x>Fechar</button></div>'+
+    '<div class="note">'+esc(p_.reg||'')+(p_.desc?' · '+esc(p_.desc):'')+'</div>'+
+    '<label>Contar a partir de</label><input id="agD" class="f" type="date" value="'+hoje()+'">'+
+    '<label>Próxima manutenção daqui a</label>'+chipsPrazo('agCh')+
+    '<div class="two"><div><label>Dias</label><input id="agDi" class="f" inputmode="numeric" value="'+esc(t?num(v(m,t,'Dias')):'')+'"></div><div><label>Próxima em</label><input id="agN" class="f" type="date"></div></div>'+
+    '<label>Serviço</label><input id="agX" class="f" value="'+esc(t?v(m,t,'Tarefa'):'Inspeção e limpeza do refletor '+id)+'">'+
+    '<label>Responsável</label><input id="agR" class="f" value="'+esc(t?v(m,t,'Responsável'):'')+'">'+
+    '<div class="btns"><button class="btn p" id="agS">Agendar</button></div><div class="note">Aparece em Manutenção › Manutenções próximas e o aviso começa '+AVISO_DIAS+' dias antes.</div>');
+  const calc=()=>{const n=num($('#agDi').value);$('#agN').value=n>0?addDias($('#agD').value||hoje(),n):'';};
+  ligaChips('agCh',$('#agDi'),calc);$('#agDi').addEventListener('input',calc);$('#agD').onchange=calc;
+  $('#agN').onchange=()=>{const n=$('#agN').value;if(n){const d=difDias($('#agD').value||hoje(),n);$('#agDi').value=d>0?d:'';$('#agDi').dispatchEvent(new Event('input'));}};calc();
+  $('#agS').onclick=async()=>{
+    const d=num($('#agDi').value);if(!(d>0)){toast('Escolha o prazo (dias)');return;}
+    let tx=$('#agX').value.trim()||('Inspeção e limpeza do refletor '+id);if(!new RegExp('\\b'+id+'\\b','i').test(tx))tx+=' ('+id+')';
+    const base={[hdr(m,'Última execução','Última')]:$('#agD').value||hoje(),[hdr(m,'Dias')]:d,[hdr(m,'Tarefa')]:tx,[hdr(m,'Responsável')]:$('#agR').value.trim()};
+    if(t)await enfileira({tipo:'atualizar',aba:MN,id:String(t[0]),campos:base});
+    else{const nid=proxIdMN();await enfileira({tipo:'incluir',aba:MN,prefixo:'MP',campos:Object.assign({[m.cab[0]||'ID']:nid,[hdr(m,'Equipamento')]:'Iluminação',[hdr(m,'Tipo')]:'Elétrica',[hdr(m,'Grupo')]:'Iluminação · '+(p_.reg||''),[hdr(m,'Periodicidade')]:'A cada '+d+' dias'},base)});}
+    toast('Agendado · próxima em '+dataBR($('#agN').value));fecha();mapaDesenha();renderLista();
+  };
 }
 
 /* ================= ESQUEMA ELÉTRICO (folhas no Drive, índice por TAG / código) ================= */
