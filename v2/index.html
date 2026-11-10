@@ -147,6 +147,12 @@ body.mapon{overflow:hidden}body.mapon #sheet,body.mapon #toast{z-index:60}body.m
 .lp.off{opacity:.45}
 .fe{position:absolute;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:5px;opacity:.9;color:#fff;font:700 11px/18px system-ui;text-align:center;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);pointer-events:none;z-index:1}
 .fe.C{background:#E35F0A}.fe.S{background:#B42318}.fe.R{background:#2F5DA8}
+.pl{position:absolute;z-index:1}.pl.ed{cursor:pointer}
+.pl.h{height:16px;transform:translateY(-50%)}.pl.v{width:16px;transform:translateX(-50%)}
+.pl::after{content:'';position:absolute}.pl.h::after{left:0;right:0;top:50%;border-top:3px dashed #2F5DA8;transform:translateY(-50%)}.pl.v::after{top:0;bottom:0;left:50%;border-left:3px dashed #2F5DA8;transform:translateX(-50%)}
+.pl.sel::after{border-color:#E35F0A;border-style:solid}
+.pl span{position:absolute;left:2px;top:-4px;font:600 10px/1 system-ui;color:#2F5DA8;background:rgba(255,255,255,.85);padding:1px 3px;border-radius:3px;white-space:nowrap;pointer-events:none}.pl.v span{top:2px;left:10px}
+.p1{position:absolute;width:12px;height:12px;border-radius:50%;background:#E35F0A;border:2px solid #fff;transform:translate(-50%,-50%);z-index:3;pointer-events:none}
 .mpbar{display:flex;gap:6px;overflow-x:auto;padding:6px 10px;border-bottom:1px solid var(--ln);align-items:center;background:var(--sf)}
 .mpbar .chip{flex:none}
 .mppan{max-height:38vh;overflow:auto;border-top:1px solid var(--ln);background:var(--sf);padding:8px 12px}
@@ -1584,7 +1590,7 @@ const ETAPAS_EVISC=[[1, "C", "Início da carga", 24.29, 13.39], [2, "C", "Descid
 const MP_PER=[['30','30 dias'],['90','90 dias'],['365','12 meses'],['0','Tudo']];
 
 /* ---- modelos de refletor = peças da aba Peças (categoria Refletores / Iluminação) ---- */
-function ehRefletor(a,r){return /refletor|luminaria|ilumina|lampada|projetor led/.test(norm(v(a,r,'Conjunto')+' '+v(a,r,'Equipamento')+' '+v(a,r,'Descrição')));}
+function ehRefletor(a,r){return /refletor|iluminacao|luminaria/.test(norm(v(a,r,'Conjunto')+' '+v(a,r,'Equipamento')))||/(^|[^a-z])(refletor|refletores|luminaria|luminarias|lampada|lampadas)([^a-z]|$)/.test(norm(v(a,r,'Descrição')));}
 function rotModelo(a,r){return String(r[0])+' · '+v(a,r,'Descrição');}
 function pecaDoModelo(txt){const id=String(txt||'').split('·')[0].trim();if(!id)return null;const a=aba('Peças');return a.linhas.find(r=>String(r[0])===id)||null;}
 function potDoModelo(txt){const m=String(txt||'').match(/(\d+(?:[.,]\d+)?)\s*W\b/i);return m?m[1].replace(',','.'):'';}
@@ -1619,19 +1625,33 @@ function mapaUI(){
   el.innerHTML='<div class="esqh"><button class="btn" id="mpX" aria-label="Fechar">✕</button><div class="esqt"><b id="mpTi">Mapa de iluminação</b><span id="mpSu"></span></div>'+
     '<div class="esqn"><button class="btn" id="mpZm" aria-label="Diminuir">−</button><button class="btn" id="mpZp" aria-label="Aumentar">+</button><button class="btn" id="mpAdd" hidden>+ Ponto</button></div></div>'+
     '<div class="mpbar" id="mpBar"></div>'+
-    '<div id="mpBox" class="esqbox"><div id="mpIn" class="mpin"><img id="mpImg" alt="Planta da área com os pontos de iluminação"><div id="mpFl"></div><div id="mpPt"></div></div></div>'+
+    '<div id="mpBox" class="esqbox"><div id="mpIn" class="mpin"><img id="mpImg" alt="Planta da área com os pontos de iluminação"><div id="mpFl"></div><div id="mpLn"></div><div id="mpPt"></div></div></div>'+
     '<div class="mppan" id="mpPan"></div>';
   document.body.appendChild(el);
-  const M=S.mapa={z:1,per:'365',fluxo:false,modo:'',sel:null,mapa:MAPAS[0]};
+  const M=S.mapa={z:1,per:'365',fluxo:false,modo:'',sel:null,mapa:MAPAS[0],perf:ls.get('pcm2_perf')!=='0',p1:null,lnSel:null};
   $('#mpX').onclick=()=>{el.hidden=true;document.body.classList.remove('mapon');M.modo='';};
   $('#mpZp').onclick=()=>mapaZoom(M.z*1.5);$('#mpZm').onclick=()=>mapaZoom(M.z/1.5);
   $('#mpAdd').onclick=()=>{M.modo=M.modo==='add'?'':'add';mapaDesenha();if(M.modo)toast('Toque na planta onde fica o refletor');};
-  $('#mpBar').onclick=e=>{const b=e.target.closest('[data-per]');if(b){M.per=b.dataset.per;mapaDesenha();return;}if(e.target.closest('#mpFx')){M.fluxo=!M.fluxo;mapaDesenha();}};
+  $('#mpBar').onclick=e=>{const b=e.target.closest('[data-per]');if(b){M.per=b.dataset.per;mapaDesenha();return;}if(e.target.closest('#mpFx')){M.fluxo=!M.fluxo;mapaDesenha();return;}
+    if(e.target.closest('#mpPf')){M.perf=!M.perf;ls.set('pcm2_perf',M.perf?'1':'0');if(!M.perf&&M.modo.startsWith('ln'))M.modo='';mapaDesenha();return;}
+    if(e.target.closest('#mpLnAdd')){if(M.modo.startsWith('ln')){M.modo='';M.p1=null;}else{M.modo='ln';M.p1=null;M.perf=true;toast('Toque no início e depois no fim do perfilado');}mapaDesenha();}};
   $('#mpIn').onclick=e=>{
     const p_=e.target.closest('.lp');
     if(p_&&!M.modo){detPonto(p_.dataset.pt);return;}
+    const l_=e.target.closest('.pl.ed');
+    if(l_&&!M.modo){detPerfilado(l_.dataset.ln);return;}
     if(!M.modo)return;
-    const r=$('#mpIn').getBoundingClientRect();const x=+((e.clientX-r.left)/r.width*100).toFixed(2),y=+((e.clientY-r.top)/r.height*100).toFixed(2);
+    const r=$('#mpIn').getBoundingClientRect();let x=+((e.clientX-r.left)/r.width*100).toFixed(2),y=+((e.clientY-r.top)/r.height*100).toFixed(2);
+    if(M.modo.startsWith('ln')){
+      if(!M.p1){M.p1={x,y};mapaDesenha();return;}
+      const K=M.mapa.h/M.mapa.w,a=M.p1,hz=Math.abs(x-a.x)>=Math.abs(y-a.y)*K;
+      const L=perfilados(),rid=M.modo.slice(3);
+      const n=hz?{o:'h',p:a.y,a:Math.min(a.x,x),b:Math.max(a.x,x)}:{o:'v',p:a.x,a:Math.min(a.y,y),b:Math.max(a.y,y)};
+      if(n.b-n.a<1){toast('Linha muito curta — toque no início e no fim do perfilado');M.p1=null;mapaDesenha();return;}
+      if(rid){const k=L.find(q=>q.id===rid);if(k)Object.assign(k,n);}else{let i=1;while(L.some(q=>q.id==='P'+i))i++;L.push(Object.assign({id:'P'+i,n:''},n));}
+      M.modo='';M.p1=null;salvaPerfilados(L).then(()=>{toast(rid?'Perfilado redesenhado':'Perfilado criado ('+(hz?'horizontal':'vertical')+')');mapaDesenha();});return;
+    }
+    {const sn=encaixa(x,y);if(sn.ok){x=sn.x;y=sn.y;toast('Alinhado ao perfilado');}}
     if(M.modo==='add'){M.modo='';formPonto(null,{x,y});mapaDesenha();}
     else if(M.modo.startsWith('mv:')){const id=M.modo.slice(3);M.modo='';enfileira({tipo:'atualizar',aba:PT_AB,id,campos:{'X (%)':String(x),'Y (%)':String(y)},admin:true}).then(()=>{toast('Ponto '+id+' movido');mapaDesenha();});}
   };
@@ -1661,8 +1681,10 @@ function mapaDesenha(){
   const P=pontos().filter(p=>p.mapa===M.mapa.id);
   const C={};P.forEach(p=>C[p.id]=qtdTrocas(trocasDe(p.id,dias)));
   const ag={};const pr=proximas();P.forEach(p=>{const t=tarefaPonto(p.id);if(t){const x=pr.find(q=>q.id===String(t[0]));if(x&&x.falta<=AVISO_DIAS)ag[p.id]=x;}});
-  $('#mpSu').textContent=P.length+' ponto'+(P.length===1?'':'s')+' · '+M.mapa.sub+(M.modo==='add'?' · toque na planta para criar o ponto':M.modo.startsWith('mv:')?' · toque no novo local do ponto '+M.modo.slice(3):'');
-  $('#mpBar').innerHTML=MP_PER.map(([k,t])=>'<button class="chip" data-per="'+k+'" aria-pressed="'+(M.per===k)+'">'+t+'</button>').join('')+'<button class="chip" id="mpFx" aria-pressed="'+M.fluxo+'">🔁 Fluxo da linha</button>';
+  $('#mpSu').textContent=P.length+' ponto'+(P.length===1?'':'s')+' · '+M.mapa.sub+(M.modo.startsWith('ln')?(M.p1?' · agora toque no FIM do perfilado':' · toque no INÍCIO do perfilado'):M.modo==='add'?' · toque na planta para criar o ponto'+(M.perf&&perfilados().length?' (encaixa no perfilado mais próximo)':''):M.modo.startsWith('mv:')?' · toque no novo local do ponto '+M.modo.slice(3):'');
+  $('#mpBar').innerHTML=MP_PER.map(([k,t])=>'<button class="chip" data-per="'+k+'" aria-pressed="'+(M.per===k)+'">'+t+'</button>').join('')+'<button class="chip" id="mpFx" aria-pressed="'+M.fluxo+'">🔁 Fluxo da linha</button><button class="chip" id="mpPf" aria-pressed="'+M.perf+'">📏 Perfilados'+(perfilados().length?' ('+perfilados().length+')':'')+'</button>'+(adm&&M.perf?'<button class="chip" id="mpLnAdd" aria-pressed="'+M.modo.startsWith('ln')+'">'+(M.modo.startsWith('ln')?'Cancelar linha':'+ Linha')+'</button>':'');
+  $('#mpIn').classList.toggle('add',!!M.modo);
+  $('#mpLn').innerHTML=(M.perf?perfilados().map(l=>'<div class="pl '+l.o+(adm?' ed':'')+(M.lnSel===l.id?' sel':'')+'" data-ln="'+esc(l.id)+'" style="'+(l.o==='h'?'left:'+l.a+'%;width:'+(l.b-l.a)+'%;top:'+l.p+'%':'top:'+l.a+'%;height:'+(l.b-l.a)+'%;left:'+l.p+'%')+'">'+(l.n?'<span>'+esc(l.n)+'</span>':'')+'</div>').join(''):'')+(M.p1?'<div class="p1" style="left:'+M.p1.x+'%;top:'+M.p1.y+'%"></div>':'');
   $('#mpFl').innerHTML=M.fluxo?ETAPAS_EVISC.map(([n,t,ti,x,y])=>'<div class="fe '+t+'" style="left:'+x+'%;top:'+y+'%" title="'+esc(ti)+'">'+n+'</div>').join(''):'';
   $('#mpPt').innerHTML=P.map(p=>{const n=C[p.id];const cl=n>=3?'n3':n===2?'n2':n===1?'n1':'';const halo=n?'box-shadow:0 0 0 '+(4+Math.min(n,8)*4)+'px rgba(220,38,38,'+(0.12+Math.min(n,8)*0.03)+')':'';
     return '<div class="lp '+cl+(ag[p.id]?' ag':'')+(p.ativo?'':' off')+(M.sel===p.id?' sel':'')+'" data-pt="'+esc(p.id)+'" style="left:'+p.x+'%;top:'+p.y+'%;'+halo+'" title="'+esc(p.id+' · '+p.reg+(n?' · '+n+' troca(s)':''))+'">'+esc(p.id.replace(/^R0*/,'R'))+'</div>';}).join('');
@@ -1682,6 +1704,42 @@ function mapaDesenha(){
     (RK.length?'<div class="grp" style="margin-top:6px">Regiões mais afetadas</div>'+RK.map(([k,o])=>'<div class="rk"><span>'+esc(k)+'</span><i style="width:'+(o.t/max*100)+'%;opacity:'+(o.t?1:.15)+'"></i><b>'+o.t+'</b></div>').join(''):'')+
     (top.length?'<div class="grp" style="margin-top:6px">Refletores com mais trocas</div><div>'+top.map(p=>'<button class="chip" data-pt="'+esc(p.id)+'">'+esc(p.id)+' · '+esc(p.reg||'—')+' · <b>'+C[p.id]+'</b></button>').join(' ')+'</div>':'')+
     (semPonto.length?'<div class="note" style="margin-top:6px">'+semPonto.length+' troca(s) no período sem ponto no mapa (campo "Refletor" vazio ou diferente do ID do ponto).</div>':'')+'</div>';
+}
+
+/* ---- perfilados / calhas (linhas-guia no mapa, guardadas na aba Config app) ---- */
+function chavePerf(){return 'mapa:'+((S.mapa&&S.mapa.mapa.id)||'EVISC')+':perfilados';}
+function perfilados(){try{const L=JSON.parse(cfg(chavePerf())||'[]');return Array.isArray(L)?L.filter(l=>l&&(l.o==='h'||l.o==='v')):[];}catch(e){return [];}}
+function salvaPerfilados(L){L.forEach(l=>{['p','a','b'].forEach(k=>l[k]=+(+l[k]).toFixed(2));});return enfileira({tipo:'config',chave:chavePerf(),valor:L.length?JSON.stringify(L):''});}
+const PERF_TOL=1.6; /* distância máxima (em % da largura) para encaixar o ponto na linha */
+function encaixa(x,y,so){const M=S.mapa;if(!M||(!M.perf&&!so))return {ok:false,x,y};const K=M.mapa.h/M.mapa.w;let bh=null,bv=null;
+  (so?[so]:perfilados()).forEach(l=>{if(l.o==='h'){if(x<l.a-PERF_TOL||x>l.b+PERF_TOL)return;const d=Math.abs(y-l.p)*K;if(d<=PERF_TOL&&(!bh||d<bh.d))bh={d,l};}else{if(y<l.a-PERF_TOL/K||y>l.b+PERF_TOL/K)return;const d=Math.abs(x-l.p);if(d<=PERF_TOL&&(!bv||d<bv.d))bv={d,l};}});
+  if(bh)y=bh.l.p;if(bv)x=bv.l.p;return {ok:!!(bh||bv),x:+x.toFixed(2),y:+y.toFixed(2)};}
+function detPerfilado(id){
+  if(!isAdm())return;const M=S.mapa;let L=perfilados();const l=L.find(q=>q.id===id);if(!l)return;M.lnSel=id;mapaDesenha();
+  const hz=l.o==='h';const perto=()=>pontos().filter(p=>p.mapa===M.mapa.id).map(p=>({p,s:encaixa(p.x,p.y,l)})).filter(o=>o.s.ok&&(o.s.x!==p_x(o.p)||o.s.y!==p_y(o.p)));
+  const p_x=p=>+p.x.toFixed(2),p_y=p=>+p.y.toFixed(2);
+  const noL=pontos().filter(p=>p.mapa===M.mapa.id&&encaixa(p.x,p.y,l).ok).length;
+  abre('<div class="ph"><b>📏 Perfilado '+esc(id)+' · '+(hz?'horizontal':'vertical')+'</b><button class="lnk" data-x>Fechar</button></div>'+
+    '<label>Nome (opcional)</label><input id="pfN" class="f" value="'+esc(l.n||'')+'" placeholder="ex.: Perfilado da linha principal">'+
+    '<label>Ajuste fino da posição</label><div class="btns" style="margin-top:4px"><button class="btn" data-nd="-1">'+(hz?'↑↑':'←←')+'</button><button class="btn" data-nd="-0.2">'+(hz?'↑':'←')+'</button><button class="btn" data-nd="0.2">'+(hz?'↓':'→')+'</button><button class="btn" data-nd="1">'+(hz?'↓↓':'→→')+'</button></div>'+
+    '<label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="pfJ" checked> Mover junto os '+noL+' refletor(es) desta linha</label>'+
+    '<div class="btns"><button class="btn p" id="pfS">Salvar nome</button><button class="btn" id="pfA">🧲 Alinhar refletores próximos</button></div>'+
+    '<div class="btns" style="margin-top:0"><button class="btn" id="pfR">✏️ Redesenhar (2 toques)</button><button class="btn" id="pfD" style="color:var(--cr)">🗑️ Excluir linha</button></div>'+
+    '<div class="note">As linhas servem só de guia para alinhar os refletores. Para escondê-las, use o botão "📏 Perfilados" no mapa. Excluir a linha não apaga os refletores.</div>');
+  const sai=()=>{M.lnSel=null;mapaDesenha();};$('#pane [data-x]').onclick=()=>{fecha();sai();};
+  $('#pane').querySelectorAll('[data-nd]').forEach(b=>b.onclick=async()=>{
+    const d=+b.dataset.nd;L=perfilados();const k=L.find(q=>q.id===id);if(!k)return;const ant=Object.assign({},k);k.p=Math.max(0,Math.min(100,+(k.p+d).toFixed(2)));
+    const mov=$('#pfJ').checked?pontos().filter(p=>p.mapa===M.mapa.id&&encaixa(p.x,p.y,ant).ok):[];
+    await salvaPerfilados(L);
+    for(const p of mov)await enfileira({tipo:'atualizar',aba:PT_AB,id:p.id,campos:hz?{'Y (%)':String(k.p)}:{'X (%)':String(k.p)},admin:true});
+    mapaDesenha();});
+  $('#pfS').onclick=async()=>{L=perfilados();const k=L.find(q=>q.id===id);if(k){k.n=$('#pfN').value.trim();await salvaPerfilados(L);}toast('Perfilado salvo');fecha();sai();};
+  $('#pfA').onclick=async()=>{const k=perfilados().find(q=>q.id===id);const A=pontos().filter(p=>p.mapa===M.mapa.id).map(p=>({p,s:encaixa(p.x,p.y,k)})).filter(o=>o.s.ok&&(o.s.x!==+o.p.x.toFixed(2)||o.s.y!==+o.p.y.toFixed(2)));
+    if(!A.length){toast('Nenhum refletor fora da linha por perto');return;}
+    for(const o of A)await enfileira({tipo:'atualizar',aba:PT_AB,id:o.p.id,campos:{'X (%)':String(o.s.x),'Y (%)':String(o.s.y)},admin:true});
+    toast(A.length+' refletor(es) alinhado(s)');mapaDesenha();};
+  $('#pfR').onclick=()=>{fecha();M.lnSel=id;M.modo='ln:'+id;M.p1=null;mapaDesenha();toast('Toque no novo início e depois no novo fim');};
+  $('#pfD').onclick=async()=>{if(!confirmar('Excluir o perfilado '+id+'? Os refletores continuam no mapa.'))return;await salvaPerfilados(perfilados().filter(q=>q.id!==id));toast('Perfilado excluído');fecha();sai();};
 }
 function formPonto(id,pos){
   if(!isAdm()){toast('Só o administrador cadastra pontos');return;}
