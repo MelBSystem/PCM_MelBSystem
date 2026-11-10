@@ -347,6 +347,8 @@ function aplicaLocal(op){
   if(op.tipo==='imagem'){S.img[op.imgKey]=op.b64;put('img',op.imgKey,op.b64);return;}
   if(op.tipo==='config'){if(!S.d.abas[CFG_AB])S.d.abas[CFG_AB]={cab:['Chave','Valor','Alterado por / em'],linhas:[]};const c=S.d.abas[CFG_AB];const i=c.linhas.findIndex(x=>String(x[0])===op.chave);if(op.valor===''||op.valor==null){if(i>=0)c.linhas.splice(i,1);}else if(i>=0)c.linhas[i][1]=op.valor;else c.linhas.push([op.chave,op.valor,'']);return;}
   if(op.tipo==='excluir'&&op.aba==='imagens_app'){delete S.img[op.id];del('img',op.id);if(S.d.imgApp){const k=S.d.imgApp.indexOf(op.id);if(k>=0)S.d.imgApp.splice(k,1);}return;}
+  if(op.aba===LED_AB&&S.d.abas[LED_AB]&&S.d.abas[LED_AB].cab.length&&S.d.abas[LED_AB].cab.indexOf('Modelo instalado')<0){S.d.abas[LED_AB].cab.push('Modelo instalado');S.d.abas[LED_AB].linhas.forEach(x=>x.push(''));}
+  if(op.aba===PT_AB&&S.d.abas[PT_AB]&&S.d.abas[PT_AB].cab.length&&S.d.abas[PT_AB].cab.indexOf('Modelo')<0){S.d.abas[PT_AB].cab.push('Modelo');S.d.abas[PT_AB].linhas.forEach(x=>x.push(''));}
   if(op.aba===PT_AB&&!(S.d.abas[PT_AB]&&S.d.abas[PT_AB].cab.length))S.d.abas[PT_AB]={cab:PT_CAB.slice(),linhas:[]};
   if(op.aba===FT_AB&&!(S.d.abas[FT_AB]&&S.d.abas[FT_AB].cab.length))S.d.abas[FT_AB]={cab:['ID','Aba','Registro','Legenda','Data','Por'],linhas:[]};
   const a=aba(op.aba); if(!a.cab.length) return;
@@ -1137,9 +1139,9 @@ function formNovo(nAba,titulo,cfg){
   };
   $('#nvS').onclick=()=>salva(false);$('#nvS2').onclick=()=>salva(true);
 }
-function formNovaPeca(){formNovo('Peças','Nova peça',{nome:'Peça',obrig:['Descrição'],manter:['Tipo','Equipamento','Conjunto / Categoria','Fabricante','Origem','Local'],pre:{Un:'un'},
+function formNovaPeca(pre,aoCriar){formNovo('Peças',pre?'Novo modelo de refletor':'Nova peça',{nome:'Peça',obrig:['Descrição'],manter:['Tipo','Equipamento','Conjunto / Categoria','Fabricante','Origem','Local'],pre:Object.assign({Un:'un'},pre||{}),
   id:cp=>{const t=cp('Tipo');return proxIdPref('Peças',prefPeca(t?t.value.trim():''));},
-  depois:cp=>{const e=cp('Equipamento');if(e)botaoLista(e);},abrir:id=>detPeca('Peças',id)});}
+  depois:cp=>{const e=cp('Equipamento');if(e)botaoLista(e);},abrir:id=>aoCriar?aoCriar(id):detPeca('Peças',id)});}
 function formNovoEquip(){formNovo(EQ_AB,'Novo equipamento',{nome:'Equipamento',obrig:['Equipamento'],manter:['Origem','Área / local'],pre:{Qtd:'1'},
   id:()=>proxIdPref(EQ_AB,'EQ'),abrir:id=>{S.eqSel=id;S.eqAba='eletrica';render();}});}
 /* ---- escolher peças cadastradas (aba Peças) para o lançamento de manutenção ---- */
@@ -1526,7 +1528,7 @@ function lLed(V){
   V.innerHTML='<button class="aviso" id="ledMapa" style="background:var(--sf);color:inherit;border-color:var(--ln)">🗺️<span><b style="color:var(--ac)">Mapa de iluminação</b> — pontos dos refletores, trocas por região e agendamentos</span></button><div class="sum"><div><b>'+tot+'</b><span>refletores trocados</span></div><div><b>'+L.length+'</b><span>registros</span></div><div><b>'+Object.keys(set).length+'</b><span>setores</span></div></div>'+
     (L.length?'<div class="note">'+Object.keys(set).sort().map(k=>esc(k)+': '+set[k]).join(' · ')+'</div>':'')+
     '<div class="bar"><span>'+esc(sel)+'</span>'+(L.length?'<button class="lnk" id="ledPdf">PDF do mês</button>':'')+'</div>'+
-    (L.length?'<div class="list">'+L.slice().reverse().map(r=>'<button class="card" data-l="'+esc(r[0])+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Setor'))+(v(a,r,'Refletor')?' · '+esc(v(a,r,'Refletor')):'')+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+' · '+esc(v(a,r,'Motivo'))+(v(a,r,'Potência')?' · '+esc(v(a,r,'Potência'))+' W':'')+'</div><div class="cm">'+esc(v(a,r,'Respons'))+'</div></div><div class="rt">'+esc(v(a,r,'Qtd')||'1')+'<div class="cm">un</div></div></button>').join('')+'</div>':'<div class="empty">Nenhuma troca registrada em '+esc(sel)+'.<br>Toque em <b>+ Troca</b>.</div>');
+    (L.length?'<div class="list">'+L.slice().reverse().map(r=>'<button class="card" data-l="'+esc(r[0])+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Setor'))+(v(a,r,'Refletor')?' · '+esc(v(a,r,'Refletor')):'')+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+' · '+esc(v(a,r,'Motivo'))+(v(a,r,'Potência')?' · '+esc(v(a,r,'Potência'))+' W':'')+'</div><div class="cm">'+esc(v(a,r,'Respons'))+(v(a,r,'Modelo')?' · '+esc(v(a,r,'Modelo')):'')+'</div></div><div class="rt">'+esc(v(a,r,'Qtd')||'1')+'<div class="cm">un</div></div></button>').join('')+'</div>':'<div class="empty">Nenhuma troca registrada em '+esc(sel)+'.<br>Toque em <b>+ Troca</b>.</div>');
   V.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>formLed(b.dataset.l));$('#ledMapa').onclick=()=>abreMapa();
   const pb=$('#ledPdf');if(pb)pb.onclick=()=>pdfLed(sel,L);
 }
@@ -1541,19 +1543,27 @@ function formLed(id,pre){pre=pre||{};
     '<div class="two"><div><label>Data da troca</label><input id="lD" class="f" type="date" value="'+esc(dIso)+'"></div><div><label>Qtd</label><input id="lQ" class="f" inputmode="numeric" value="'+esc(g('Qtd')||'1')+'"></div></div>'+
     '<label>Setor / local</label><input id="lS" class="f" list="dlLS" value="'+esc(g('Setor'))+'" placeholder="ex.: Sala de abate – teto"><datalist id="dlLS">'+setores.map(e=>'<option value="'+esc(e)+'">').join('')+'</datalist>'+
     '<div class="two"><div><label>Refletor (ponto no mapa)</label><input id="lR" class="f" list="dlLR" value="'+esc(g('Refletor')||pre.ponto||'')+'" placeholder="ex.: R012"><datalist id="dlLR">'+pontos().map(p=>'<option value="'+esc(p.id)+'">'+esc(p.reg+(p.desc?' · '+p.desc:''))+'</option>').join('')+'</datalist></div><div><label>Potência (W)</label><input id="lP" class="f" inputmode="numeric" value="'+esc(g('Potência'))+'"></div></div>'+
+    campoModelo('lMd',g('Modelo'),'Modelo novo instalado')+
+    (r?'':'<label style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="lBx"> <span id="lBxT">Dar baixa no estoque do modelo</span></label>')+
     '<label>Motivo</label><select id="lM" class="f">'+['Queimado','Oscilando / piscando','Dano físico','Infiltração / umidade','Preventiva','Outro'].map(o=>'<option'+(g('Motivo')===o?' selected':'')+'>'+o+'</option>').join('')+'</select>'+
     '<label>Observação</label><input id="lO" class="f" value="'+esc(g('Observação'))+'">'+
     '<div class="btns"><button class="btn p" id="lSv">Salvar</button>'+(r?'<button class="btn" id="lDl" style="color:var(--cr)">🗑️ Excluir</button>':'')+'</div><div class="note">O mês é preenchido automaticamente pela data.'+(r?'':' Depois de salvar, abra o registro para anexar fotos.')+'</div>'+(r?blocoFotos(LED_AB,r):''));
   if(r)ligaFotos(LED_AB,r,()=>formLed(id));
   {const pp=()=>{const p=pontos().find(x=>x.id.toUpperCase()===$('#lR').value.trim().toUpperCase());if(!p)return;if(!$('#lS').value.trim())$('#lS').value=p.reg;if(!$('#lP').value.trim()&&p.pot)$('#lP').value=p.pot;};$('#lR').addEventListener('change',pp);$('#lR').addEventListener('input',pp);if(pre.ponto)pp();
    const b=document.createElement('button');b.type='button';b.className='btn';b.textContent='🗺️ Escolher no mapa';b.style.marginTop='6px';b.onclick=()=>{fecha();abreMapa($('#lR').value.trim()||null);toast('Toque no refletor e depois em "Registrar troca"');};$('#lR').closest('.two').after(b);}
+  {const bx=()=>{const cb=$('#lBx');if(!cb)return;const pc=pecaDoModelo($('#lMd').value);const pa=aba('Peças');cb.disabled=!pc;if(!pc)cb.checked=false;else if(!cb.dataset.t)cb.checked=num(v(pa,pc,'Estoque atual'))>0;$('#lBxT').textContent=pc?'Dar baixa de '+(num($('#lQ').value)||1)+' no estoque de '+pc[0]+' (estoque atual: '+(v(pa,pc,'Estoque atual')||'0')+')':'Dar baixa no estoque (escolha um modelo da lista de peças)';};
+   ligaModelo('lMd',$('#lP'),bx);$('#lQ').addEventListener('input',bx);if($('#lBx'))$('#lBx').onclick=()=>{$('#lBx').dataset.t=1;};
+   if(!r&&!$('#lMd').value){const U=modelosUsados();if(U.length===1){$('#lMd').value=U[0];$('#lMd').dispatchEvent(new Event('change'));}}bx();}
   const ld=$('#lDl');if(ld)ld.onclick=()=>excluirLinha(LED_AB,r,'a troca '+id);
   $('#lSv').onclick=async()=>{
     const d=$('#lD').value||hoje();
-    const c={'Data da troca':d,'Mês':d.slice(0,7),'Setor / local':$('#lS').value.trim(),'Refletor (identificação)':$('#lR').value.trim(),'Potência (W)':$('#lP').value.trim(),'Qtd':num($('#lQ').value)||1,'Motivo':$('#lM').value,'Observação':$('#lO').value.trim()};
+    const c={'Data da troca':d,'Mês':d.slice(0,7),'Setor / local':$('#lS').value.trim(),'Refletor (identificação)':$('#lR').value.trim(),'Potência (W)':$('#lP').value.trim(),'Qtd':num($('#lQ').value)||1,'Motivo':$('#lM').value,'Observação':$('#lO').value.trim(),'Modelo instalado':$('#lMd').value.trim()};
     if(!c['Setor / local']){toast('Informe o setor / local');return;}
     if(r) await enfileira({tipo:'atualizar',aba:LED_AB,id,campos:c});
-    else { c.ID='LED'+String(Date.now()).slice(-6); c['Responsável']=S.user.nome; await enfileira({tipo:'incluir',aba:LED_AB,campos:c}); }
+    else { c.ID='LED'+String(Date.now()).slice(-6); c['Responsável']=S.user.nome; const baixa=$('#lBx')&&$('#lBx').checked; await enfileira({tipo:'incluir',aba:LED_AB,campos:c});
+      const pc=pecaDoModelo(c['Modelo instalado']);if(pc&&baixa)await enfileira({tipo:'somar',aba:'Peças',id:String(pc[0]),campos:{'Estoque atual':-c.Qtd}});
+      const pt=c['Modelo instalado']?pontos().find(x=>x.id.toUpperCase()===c['Refletor (identificação)'].toUpperCase()):null;
+      if(pt&&(pt.modelo!==c['Modelo instalado']||(c['Potência (W)']&&String(pt.pot)!==c['Potência (W)']))){const cp={'Modelo':c['Modelo instalado']};if(c['Potência (W)'])cp['Potência (W)']=c['Potência (W)'];await enfileira({tipo:'atualizar',aba:PT_AB,id:pt.id,campos:cp});} }
     toast('Troca registrada em '+mesNome(c['Mês']));fecha();if($('#mapV')&&!$('#mapV').hidden){mapaDesenha();if(pre.ponto)detPonto(pre.ponto);return;}S.chip=mesNome(c['Mês']);render();
   };
 }
@@ -1568,12 +1578,37 @@ function pdfLed(mes,L){
 
 /* ================= MAPA DE ILUMINAÇÃO (planta da evisceração, pontos de refletores) ================= */
 const PT_AB='Pontos iluminação';
-const PT_CAB=['ID','Mapa','Região','Descrição','X (%)','Y (%)','Potência (W)','Qtd','Ativo','Observação'];
+const PT_CAB=['ID','Mapa','Região','Descrição','X (%)','Y (%)','Potência (W)','Qtd','Ativo','Observação','Modelo'];
 const MAPAS=[{id:'EVISC',nome:'Evisceração',sub:'Layout 80387 · ZLB 001',src:'mapas/evisceracao.png',w:3400,h:2202}];
 const ETAPAS_EVISC=[[1, "C", "Início da carga", 24.29, 13.39], [2, "C", "Descida lateral esquerda", 17.35, 22.32], [3, "C", "Linha principal de carga", 54.95, 31.43], [4, "C", "Descida lateral direita", 91.96, 55.36], [5, "C", "Acionamento principal", 90.23, 86.43], [6, "C", "Trecho inferior e subida", 82.13, 80.8], [7, "C", "Trecho elevado", 74.61, 72.77], [8, "C", "Chaves de desvio 2R / 2L", 65.64, 76.79], [9, "C", "Linha inferior de carga", 47.43, 79.02], [10, "S", "Transpasse de saída", 13.59, 79.02], [11, "R", "Retorno inferior", 26.03, 85.27], [12, "R", "Subida central do retorno", 38.87, 53.57], [13, "R", "Acionamento do retorno", 39.91, 17.41], [14, "R", "Esticador pneumático", 49.74, 14.73], [15, "R", "Retorno superior", 41.64, 13.21]];
 const MP_PER=[['30','30 dias'],['90','90 dias'],['365','12 meses'],['0','Tudo']];
+
+/* ---- modelos de refletor = peças da aba Peças (categoria Refletores / Iluminação) ---- */
+function ehRefletor(a,r){return /refletor|luminaria|ilumina|lampada|projetor led/.test(norm(v(a,r,'Conjunto')+' '+v(a,r,'Equipamento')+' '+v(a,r,'Descrição')));}
+function rotModelo(a,r){return String(r[0])+' · '+v(a,r,'Descrição');}
+function pecaDoModelo(txt){const id=String(txt||'').split('·')[0].trim();if(!id)return null;const a=aba('Peças');return a.linhas.find(r=>String(r[0])===id)||null;}
+function potDoModelo(txt){const m=String(txt||'').match(/(\d+(?:[.,]\d+)?)\s*W\b/i);return m?m[1].replace(',','.'):'';}
+function modelosUsados(){const a=aba('Peças');return a.linhas.filter(r=>ehRefletor(a,r)).map(r=>rotModelo(a,r));}
+function escolheModelo(alvo){
+  const a=aba('Peças');let todas=false;
+  const d=document.createElement('div');d.className='sheet';d.id='mdPick';d.style.zIndex='70';
+  d.innerHTML='<div class="pane"><div class="ph"><b>Modelo do refletor</b><button class="lnk" id="mdX">Fechar</button></div><input id="mdQ" class="f" placeholder="Buscar por modelo, código, potência ou fabricante" autocomplete="off"><div class="chd"><button type="button" id="mdR" aria-pressed="true">💡 Refletores</button><button type="button" id="mdT" aria-pressed="false">Todas as peças</button></div><div class="note" id="mdN"></div><div id="mdL"></div>'+(isAdm()?'<div class="btns"><button class="btn" id="mdNovo">+ Cadastrar novo modelo de refletor</button></div>':'')+'</div>';
+  document.body.appendChild(d);
+  const desenha=()=>{const q=norm($('#mdQ').value);const B=a.linhas.filter(r=>todas||ehRefletor(a,r));const T=q.split(/\s+/).filter(Boolean);const F=B.filter(r=>{const x=norm(r.join(' '));return T.every(t=>x.includes(t));});
+    $('#mdR').setAttribute('aria-pressed',String(!todas));$('#mdT').setAttribute('aria-pressed',String(todas));
+    $('#mdN').textContent=F.length+' de '+B.length+(todas?' peças':' modelos de refletor');
+    $('#mdL').innerHTML=F.length?'<div class="list">'+F.slice(0,120).map(r=>'<button class="card" data-md="'+esc(r[0])+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Descrição'))+'</div><div class="cc">'+esc(v(a,r,'Código'))+'</div><div class="cm">'+esc(r[0])+' · '+esc(v(a,r,'Fabricante'))+' · estoque '+esc(v(a,r,'Estoque atual')||'0')+'</div></div></button>').join('')+'</div>':'<div class="empty">Nenhum modelo encontrado.'+(todas?'':'<br>Toque em "Todas as peças" ou cadastre um novo modelo.')+'</div>';};
+  const sai=()=>d.remove();
+  $('#mdX').onclick=sai;d.onclick=e=>{if(e.target===d)sai();};$('#mdQ').oninput=desenha;
+  $('#mdR').onclick=()=>{todas=false;desenha();};$('#mdT').onclick=()=>{todas=true;desenha();};
+  $('#mdL').onclick=e=>{const c=e.target.closest('[data-md]');if(!c)return;const r=a.linhas.find(x=>String(x[0])===c.dataset.md);if(r){alvo.value=rotModelo(a,r);alvo.dispatchEvent(new Event('change',{bubbles:true}));}sai();};
+  if($('#mdNovo'))$('#mdNovo').onclick=()=>{sai();formNovaPeca({Tipo:'Elétrica',Equipamento:'ILUMINAÇÃO','Conjunto / Categoria':'Refletores LED'},id=>{fecha();toast('Modelo '+id+' cadastrado. Ele já aparece na lista de modelos.');});};
+  desenha();
+}
+function campoModelo(id,val,rot){return '<label>'+rot+'</label><div style="display:flex;gap:8px"><input id="'+id+'" class="f" list="dl'+id+'" value="'+esc(val||'')+'" placeholder="Escolha na lista de peças" style="flex:1"><button type="button" class="btn" id="'+id+'B" style="white-space:nowrap">🔎 Peças</button></div><datalist id="dl'+id+'">'+modelosUsados().map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist>';}
+function ligaModelo(id,potInp,depois){const inp=$('#'+id);const ap=()=>{const p=potDoModelo(inp.value);if(p&&potInp)potInp.value=p;if(depois)depois();};inp.addEventListener('change',ap);inp.addEventListener('input',()=>{if(depois)depois();});$('#'+id+'B').onclick=()=>escolheModelo(inp);}
 function pfc(x){const n=parseFloat(String(x==null?'':x).trim().replace(',','.'));return isNaN(n)?50:Math.max(0,Math.min(100,n));}
-function pontos(){const a=aba(PT_AB);return a.linhas.map(r=>({id:String(r[0]),mapa:v(a,r,'Mapa')||'EVISC',reg:v(a,r,'Região'),desc:v(a,r,'Descrição'),x:pfc(v(a,r,'X')),y:pfc(v(a,r,'Y')),pot:v(a,r,'Potência'),qtd:v(a,r,'Qtd')||'1',ativo:!/^n/i.test(v(a,r,'Ativo')||'Sim'),obs:v(a,r,'Observação'),r}));}
+function pontos(){const a=aba(PT_AB);return a.linhas.map(r=>({id:String(r[0]),mapa:v(a,r,'Mapa')||'EVISC',reg:v(a,r,'Região'),desc:v(a,r,'Descrição'),x:pfc(v(a,r,'X')),y:pfc(v(a,r,'Y')),pot:v(a,r,'Potência'),qtd:v(a,r,'Qtd')||'1',ativo:!/^n/i.test(v(a,r,'Ativo')||'Sim'),obs:v(a,r,'Observação'),modelo:v(a,r,'Modelo'),r}));}
 function trocasDe(id,dias){const a=aba(LED_AB);const lim=dias>0?addDias(hoje(),-dias):'';return a.linhas.filter(r=>String(v(a,r,'Refletor')).trim().toUpperCase()===String(id).toUpperCase()&&(!lim||isoDe(v(a,r,'Data'))>=lim));}
 function qtdTrocas(L){const a=aba(LED_AB);return L.reduce((s_,r)=>s_+(num(v(a,r,'Qtd'))||1),0);}
 function tarefaPonto(id){const a=aba(MN);return a.linhas.find(r=>norm(v(a,r,'Equipamento'))==='iluminacao'&&new RegExp('\\b'+id+'\\b','i').test(v(a,r,'Tarefa')));}
@@ -1656,13 +1691,15 @@ function formPonto(id,pos){
     (p_?'':'<div class="note">ID que será criado: <b>'+esc(proxIdPref(PT_AB,'R'))+'</b></div>')+
     '<label>Região / setor *</label><input id="ptR" class="f" list="dlPtR" value="'+esc(g('reg'))+'" placeholder="ex.: Evisceração – plataforma da linha principal"><datalist id="dlPtR">'+regs.map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist>'+
     '<label>Descrição do local</label><input id="ptD" class="f" value="'+esc(g('desc'))+'" placeholder="ex.: Teto, sobre a mesa de vísceras">'+
+    campoModelo('ptM',g('modelo'),'Modelo do refletor instalado')+
     '<div class="two"><div><label>Potência (W)</label><input id="ptP" class="f" inputmode="numeric" value="'+esc(g('pot'))+'"></div><div><label>Qtd de luminárias</label><input id="ptQ" class="f" inputmode="numeric" value="'+esc(g('qtd')||'1')+'"></div></div>'+
     (p_?'<label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="ptA"'+(p_.ativo?' checked':'')+'> Ponto ativo</label>':'')+
     '<label>Observação</label><input id="ptO" class="f" value="'+esc(g('obs'))+'">'+
     '<div class="btns"><button class="btn p" id="ptS">'+(p_?'Salvar':'Cadastrar ponto')+'</button></div>');
+  ligaModelo('ptM',$('#ptP'));
   $('#ptS').onclick=async()=>{
     const reg=$('#ptR').value.trim();if(!reg){toast('Informe a região / setor');return;}
-    const c={'Região':reg,'Descrição':$('#ptD').value.trim(),'Potência (W)':$('#ptP').value.trim(),'Qtd':$('#ptQ').value.trim()||'1','Observação':$('#ptO').value.trim()};
+    const c={'Região':reg,'Descrição':$('#ptD').value.trim(),'Modelo':$('#ptM').value.trim(),'Potência (W)':$('#ptP').value.trim(),'Qtd':$('#ptQ').value.trim()||'1','Observação':$('#ptO').value.trim()};
     if(p_){c['Ativo']=$('#ptA').checked?'Sim':'Não';await enfileira({tipo:'atualizar',aba:PT_AB,id,campos:c,admin:true});toast('Ponto '+id+' salvo');fecha();}
     else{const nid=proxIdPref(PT_AB,'R');Object.assign(c,{ID:nid,Mapa:S.mapa?S.mapa.mapa.id:'EVISC','X (%)':String(pos.x),'Y (%)':String(pos.y),'Ativo':'Sim'});await enfileira({tipo:'incluir',aba:PT_AB,campos:c,admin:true});toast('Ponto '+nid+' criado');fecha();if(S.mapa)S.mapa.sel=nid;}
     mapaDesenha();renderLista();
@@ -1674,12 +1711,12 @@ function detPonto(id){
   const t=tarefaPonto(id);const m=aba(MN);const px=t?proximas().find(q=>q.id===String(t[0])):null;
   const adm=isAdm()&&podeLancar();
   abre('<div class="ph"><b>💡 Refletor '+esc(id)+'</b><button class="lnk" data-x>Fechar</button></div>'+
-    '<div class="kv"><b>Região</b><span>'+esc(p_.reg||'—')+'</span>'+(p_.desc?'<b>Local</b><span>'+esc(p_.desc)+'</span>':'')+(p_.pot?'<b>Potência</b><span>'+esc(p_.pot)+' W</span>':'')+'<b>Luminárias</b><span>'+esc(p_.qtd)+'</span>'+(p_.obs?'<b>Obs.</b><span>'+esc(p_.obs)+'</span>':'')+(p_.ativo?'':'<b>Situação</b><span>Inativo</span>')+
+    '<div class="kv"><b>Região</b><span>'+esc(p_.reg||'—')+'</span>'+(p_.desc?'<b>Local</b><span>'+esc(p_.desc)+'</span>':'')+(p_.modelo?'<b>Modelo</b><span>'+esc(p_.modelo)+'</span>':'')+(p_.pot?'<b>Potência</b><span>'+esc(p_.pot)+' W</span>':'')+'<b>Luminárias</b><span>'+esc(p_.qtd)+'</span>'+(p_.obs?'<b>Obs.</b><span>'+esc(p_.obs)+'</span>':'')+(p_.ativo?'':'<b>Situação</b><span>Inativo</span>')+
     '<b>Trocas</b><span>'+qtdTrocas(L)+' no total · '+qtdTrocas(trocasDe(id,365))+' em 12 meses</span>'+
     '<b>Manutenção</b><span>'+(px?esc(dataBR(px.prox))+' ('+esc(faltaTxt(px.falta))+')'+(t?' · a cada '+num(v(m,t,'Dias'))+' dias':''):'sem agendamento')+'</span></div>'+
     (podeLancar()?'<div class="btns"><button class="btn p" id="pdTr">💡 Registrar troca</button><button class="btn" id="pdAg">🗓️ '+(t?'Alterar agendamento':'Agendar manutenção')+'</button></div>':'')+
     (adm?'<div class="btns" style="margin-top:0"><button class="btn" id="pdEd">✏️ Editar</button><button class="btn" id="pdMv">📍 Mover</button><button class="btn" id="pdDl" style="color:var(--cr)">🗑️ Excluir</button></div>':'')+
-    '<div class="grp" style="margin-top:8px">Histórico de trocas · '+L.length+'</div>'+(L.length?'<div class="list">'+L.slice(0,30).map(r=>'<button class="card" data-l="'+esc(r[0])+'"><div class="ci"><div class="cd">'+esc(br(v(a,r,'Data')))+' · '+esc(v(a,r,'Motivo'))+'</div><div class="cm">'+esc(v(a,r,'Respons'))+(v(a,r,'Observação')?' · '+esc(v(a,r,'Observação')):'')+'</div></div><div class="rt">'+esc(v(a,r,'Qtd')||'1')+'<div class="cm">un</div></div></button>').join('')+'</div>':'<div class="note">Nenhuma troca registrada neste ponto.</div>'));
+    '<div class="grp" style="margin-top:8px">Histórico de trocas · '+L.length+'</div>'+(L.length?'<div class="list">'+L.slice(0,30).map(r=>'<button class="card" data-l="'+esc(r[0])+'"><div class="ci"><div class="cd">'+esc(br(v(a,r,'Data')))+' · '+esc(v(a,r,'Motivo'))+'</div><div class="cm">'+esc(v(a,r,'Respons'))+(v(a,r,'Modelo')?' · '+esc(v(a,r,'Modelo')):'')+(v(a,r,'Observação')?' · '+esc(v(a,r,'Observação')):'')+'</div></div><div class="rt">'+esc(v(a,r,'Qtd')||'1')+'<div class="cm">un</div></div></button>').join('')+'</div>':'<div class="note">Nenhuma troca registrada neste ponto.</div>'));
   $('#pane').querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>formLed(b.dataset.l));
   if($('#pdTr')){$('#pdTr').onclick=()=>formLed(null,{ponto:id});$('#pdAg').onclick=()=>formAgendaPonto(id);}
   if(adm){$('#pdEd').onclick=()=>formPonto(id);$('#pdMv').onclick=()=>{fecha();if(!S.mapa||$('#mapV').hidden)abreMapa(id);S.mapa.modo='mv:'+id;mapaDesenha();toast('Toque no novo local do ponto '+id);};
