@@ -469,7 +469,7 @@ function avisoDoDia(){try{const n=nAvisos();if(!n)return;const k='pcm2_aviso_'+h
 document.querySelector('nav.tabs').onclick=e=>{const b=e.target.closest('.nb');if(!b)return;if(b.dataset.t!==S.tab&&b.dataset.t==='check'&&!S.ck)S.ckModo='fazer';S.mSel=null;S.eqSel=null;S.tab=b.dataset.t;S.q='';S.chip='';S.lim=40;$('#q').value='';scrollTo(0,0);render();};
 $('#q').oninput=e=>{S.q=norm(e.target.value);S.lim=40;clearTimeout(render.t);render.t=setTimeout(renderLista,150);};
 $('#syncB').onclick=()=>sincroniza(true);
-$('#sheet').onclick=e=>{if(e.target.id==='sheet')fecha();};
+/* o painel só fecha pelo botão Fechar (tocar fora não fecha, para não perder o que foi digitado) */
 function fecha(){$('#sheet').hidden=true;}
 function abre(h){$('#pane').innerHTML=h;aplicaRotulos($('#pane'));$('#sheet').hidden=false;$('#pane').scrollTop=0;const f=$('#pane [data-x]');if(f)f.onclick=fecha;}
 
@@ -1148,7 +1148,7 @@ function escolheEquip(alvo,soTag){
       h+='<button class="card" data-ev="'+O.indexOf(o)+'">'+(o.tag?'<div class="eqtag">'+esc(o.tag)+'</div>':'')+'<div class="ci"><div class="cd">'+esc(o.nome)+'</div>'+(o.sub?'<div class="cm">'+esc(o.sub)+'</div>':'')+'</div></button>';});
     if(g0!==null)h+='</div>';$('#epL').innerHTML=h||'<div class="empty">Nada encontrado. Feche e digite o nome direto no campo.</div>';};
   const sai=()=>d.remove();
-  $('#epX').onclick=sai;d.onclick=e=>{if(e.target===d)sai();};
+  $('#epX').onclick=sai;
   $('#epQ').oninput=desenha;
   $('#epL').onclick=e=>{const c=e.target.closest('[data-ev]');if(!c)return;const o_=O[+c.dataset.ev];alvo.value=soTag&&o_.tag?o_.tag:o_.v;alvo.dispatchEvent(new Event('input',{bubbles:true}));sai();};
   desenha();
@@ -1207,7 +1207,7 @@ function escolhePecas(alvo,aoFim){
     $('#ppL').innerHTML='<div class="list">'+F.slice(0,150).map(r=>{const id=String(r[0]),n=sel[id]||0;
       return '<div class="card" data-pp="'+esc(id)+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Descrição'))+'</div><div class="cc">'+esc(v(a,r,'Código'))+'</div><div class="cm">'+esc(id)+' · '+esc(v(a,r,'Equipamento'))+' · estoque '+esc(v(a,r,'Estoque atual')||'0')+'</div></div><div class="stepper" style="margin:0"><button data-m="-1">−</button><input class="f" inputmode="numeric" value="'+n+'" data-q style="width:44px;text-align:center"><button data-m="1">+</button></div></div>';}).join('')+'</div>'+(F.length>150?'<div class="note">Mostrando 150 — refine a busca.</div>':'');};
   const sai=()=>d.remove();
-  $('#ppX').onclick=sai;d.onclick=e=>{if(e.target===d)sai();};$('#ppQ').oninput=desenha;
+  $('#ppX').onclick=sai;$('#ppQ').oninput=desenha;
   $('#ppL').onclick=e=>{const b=e.target.closest('[data-m]');if(!b)return;const c=b.closest('[data-pp]');const id=c.dataset.pp;sel[id]=Math.max(0,(sel[id]||0)+(+b.dataset.m));if(!sel[id])delete sel[id];c.querySelector('[data-q]').value=sel[id]||0;$('#ppN').textContent=$('#ppN').textContent.replace(/ · \d+ escolhida\(s\)$/,'')+(Object.keys(sel).length?' · '+Object.keys(sel).length+' escolhida(s)':'');};
   $('#ppL').oninput=e=>{const q=e.target.closest('[data-q]');if(!q)return;const id=q.closest('[data-pp]').dataset.pp;const n=Math.max(0,Math.round(num(q.value)||0));if(n)sel[id]=n;else delete sel[id];};
   $('#ppOk').onclick=()=>{const ids=Object.keys(sel);if(!ids.length){toast('Escolha ao menos uma peça (use +)');return;}
@@ -1651,7 +1651,7 @@ function escolheModelo(alvo){
     $('#mdN').textContent=F.length+' de '+B.length+(todas?' peças':' modelos de refletor');
     $('#mdL').innerHTML=F.length?'<div class="list">'+F.slice(0,120).map(r=>'<button class="card" data-md="'+esc(r[0])+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Descrição'))+'</div><div class="cc">'+esc(v(a,r,'Código'))+'</div><div class="cm">'+esc(r[0])+' · '+esc(v(a,r,'Fabricante'))+' · estoque '+esc(v(a,r,'Estoque atual')||'0')+'</div></div></button>').join('')+'</div>':'<div class="empty">Nenhum modelo encontrado.'+(todas?'':'<br>Toque em "Todas as peças" ou cadastre um novo modelo.')+'</div>';};
   const sai=()=>d.remove();
-  $('#mdX').onclick=sai;d.onclick=e=>{if(e.target===d)sai();};$('#mdQ').oninput=desenha;
+  $('#mdX').onclick=sai;$('#mdQ').oninput=desenha;
   $('#mdR').onclick=()=>{todas=false;desenha();};$('#mdT').onclick=()=>{todas=true;desenha();};
   $('#mdL').onclick=e=>{const c=e.target.closest('[data-md]');if(!c)return;const r=a.linhas.find(x=>String(x[0])===c.dataset.md);if(r){alvo.value=rotModelo(a,r);alvo.dispatchEvent(new Event('change',{bubbles:true}));}sai();};
   if($('#mdNovo'))$('#mdNovo').onclick=()=>{sai();formNovaPeca({Tipo:'Elétrica',Equipamento:'ILUMINAÇÃO','Conjunto / Categoria':'Refletores LED'},id=>{fecha();toast('Modelo '+id+' cadastrado. Ele já aparece na lista de modelos.');});};
