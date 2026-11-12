@@ -601,7 +601,8 @@ function regChave(nAba,r){
   if(norm(a.cab[0])==='id')return '';
   return 'H:'+[v(a,r,'Data'),v(a,r,'Equipamento'),v(a,r,'Defeito','Descrição','Serviço')].map(x=>String(x||'').trim()).join('|');
 }
-function fotosDe(nAba,chave){const f=aba(FT_AB);return chave?f.linhas.filter(x=>v(f,x,'Aba')===nAba&&String(v(f,x,'Registro'))===chave):[];}
+function chaveN(k){k=String(k||'');if(k.slice(0,2)!=='H:')return k;const p=k.slice(2).split('|');p[0]=isoDe(p[0])||p[0];return 'H:'+p.map(x=>x.trim()).join('|');}
+function fotosDe(nAba,chave){const f=aba(FT_AB);if(!chave)return [];const k=chaveN(chave);return f.linhas.filter(x=>v(f,x,'Aba')===nAba&&chaveN(v(f,x,'Registro'))===k);}
 function blocoFotos(nAba,r){
   const ch=regChave(nAba,r);const F=fotosDe(nAba,ch);const f=aba(FT_AB);
   return '<div class="box" style="margin:10px 0"><b>📷 Fotos'+(F.length?' ('+F.length+')':'')+'</b>'+
@@ -652,9 +653,9 @@ function blocoFotosV(nAba,ch,titulo){
     (F.length>1?'<div class="ftgrid">'+F.slice(1).map(x=>{const id=String(x[0]);const b=imgDe(id);return '<button class="ftth" data-ft="'+esc(id)+'">'+(b?'<img src="data:image/jpeg;base64,'+b+'" alt="">':'<span>…</span>')+(v(f,x,'Legenda')?'<small>'+esc(v(f,x,'Legenda'))+'</small>':'')+'</button>';}).join('')+'</div>':'')+
     (podeLancar()?'<div class="btns"><label class="btn">📷 '+(F.length?'Adicionar outra foto':'Adicionar foto')+'<input type="file" accept="image/*" class="ftAddV" hidden multiple></label></div>':'')+'</div>';
 }
-async function anexaFotos(files,nAba,ch){
+async function anexaFotos(files,nAba,ch,semPergunta){
   const fs=[...files];if(!fs.length)return 0;
-  const leg=fs.length===1?(prompt('Legenda da foto (opcional):','')||''):'';
+  const leg=!semPergunta&&fs.length===1?(prompt('Legenda da foto (opcional):','')||''):'';
   toast('Salvando '+fs.length+' foto(s)…');let n=0;
   for(const f of fs){
     try{const b64=await reduz(f);const id='F'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
@@ -851,32 +852,42 @@ function proxIdMN(extra){const a=aba(MN);let m=0;a.linhas.forEach(r=>{const x=St
 /* ---- meses e relatório mensal da manutenção ---- */
 function manutMeses(){const a=aba('Histórico');const set=new Set([hoje().slice(0,7)]);a.linhas.forEach(r=>{const m=mesDe(v(a,r,'Data'));if(m)set.add(m);});const la=aba(LED_AB);la.linhas.forEach(r=>{const m=ledMesDa(la,r);if(m)set.add(m);});return [...set].sort().reverse().map(mesNome);}
 function manutMesCod(lbl){const p=String(lbl).split('/');const i=MESES.indexOf(p[0]);return i>=0?p[1]+'-'+String(i+1).padStart(2,'0'):'';}
-function relManut(mes){
-  const a=aba('Histórico');const L=a.linhas.filter(r=>mesDe(v(a,r,'Data'))===mes).sort((x,y)=>String(mesDe(v(a,x,'Data'))+v(a,x,'Data')).localeCompare(mesDe(v(a,y,'Data'))+v(a,y,'Data')));
-  const dia=d=>{d=String(d);return /^\d{4}-\d{2}-\d{2}/.test(d)?d.slice(8,10):d.slice(0,2);};L.sort((x,y)=>dia(v(a,x,'Data')).localeCompare(dia(v(a,y,'Data'))));
+function fotosRel(nAba,a,r,rot){const F=fotosDe(nAba,regChave(nAba,r)).map(x=>({b:imgDe(String(x[0])),l:v(aba(FT_AB),x,'Legenda')})).filter(o=>o.b);if(!F.length)return '';
+  return '<div style="page-break-inside:avoid;margin:10px 0 2px"><div style="font-size:11px;margin-bottom:2px">'+rot+'</div>'+F.map(o=>'<div style="display:inline-block;width:31%;margin:3px 1.5% 3px 0;vertical-align:top;font-size:10px"><img src="data:image/jpeg;base64,'+o.b+'" style="width:100%;max-height:220px;object-fit:contain;border:1px solid #999" alt="">'+(o.l?'<div>'+esc(o.l)+'</div>':'')+'</div>').join('')+'</div>';}
+function nFotosTxt(nAba,r){const n=fotosDe(nAba,regChave(nAba,r)).length;return n?' <small>(📷 '+n+' foto'+(n>1?'s':'')+' abaixo)</small>':'';}
+function relManut(mes,rg){
+  const dentro=d=>rg?(isoDe(d)>=rg.de&&isoDe(d)<=rg.ate):mesDe(d)===mes;const ledIn=(la_,r)=>rg?dentro(v(la_,r,'Data')):ledMesDa(la_,r)===mes;const perNome=rg?('semana de '+dataBR(rg.de)+' a '+dataBR(rg.ate)):mesNome(mes);
+  const a=aba('Histórico');const L=a.linhas.filter(r=>dentro(v(a,r,'Data'))).sort((x,y)=>String(mesDe(v(a,x,'Data'))+v(a,x,'Data')).localeCompare(mesDe(v(a,y,'Data'))+v(a,y,'Data')));
+  const dia=d=>{d=String(d);return /^\d{4}-\d{2}-\d{2}/.test(d)?d.slice(8,10):d.slice(0,2);};L.sort((x,y)=>rg?isoDe(v(a,x,'Data')).localeCompare(isoDe(v(a,y,'Data'))):dia(v(a,x,'Data')).localeCompare(dia(v(a,y,'Data'))));
   const tipos=[];L.forEach(r=>{const t=v(a,r,'Tipo')||'Outros';if(tipos.indexOf(t)<0)tipos.push(t);});
   const ord=['Corretiva','Preventiva','Preditiva','Melhoria'];tipos.sort((x,y)=>((ord.indexOf(x)+99)%99)-((ord.indexOf(y)+99)%99));
   const parado=L.reduce((s,r)=>s+num(v(a,r,'Tempo parado','Tempo')),0);
   const eqs={};L.forEach(r=>{const e=v(a,r,'Equipamento')||'—';eqs[e]=(eqs[e]||0)+1;});
   const top=Object.entries(eqs).sort((x,y)=>y[1]-x[1]).slice(0,5);
-  let h='<h1>Relatório de manutenção · '+esc(mesNome(mes))+'</h1><div class="meta">PCM · '+L.length+' registros · '+tipos.map(t=>esc(t)+': '+L.filter(r=>(v(a,r,'Tipo')||'Outros')===t).length+' · ').join('')+Math.round(parado)+' min de máquina parada · '+aba(LED_AB).linhas.filter(r=>ledMesDa(aba(LED_AB),r)===mes).length+' trocas de LED · emitido em '+esc(new Date().toLocaleString('pt-BR'))+' por '+esc(S.user.nome)+'</div>';
+  let h='<h1>Relatório de manutenção · '+esc(perNome)+'</h1><div class="meta">PCM · '+L.length+' registros · '+tipos.map(t=>esc(t)+': '+L.filter(r=>(v(a,r,'Tipo')||'Outros')===t).length+' · ').join('')+Math.round(parado)+' min de máquina parada · '+aba(LED_AB).linhas.filter(r=>ledIn(aba(LED_AB),r)).length+' trocas de LED · emitido em '+esc(new Date().toLocaleString('pt-BR'))+' por '+esc(S.user.nome)+'</div>';
   if(top.length)h+='<div class="meta"><b>Equipamentos com mais registros:</b> '+top.map(([e,n])=>esc(e)+' ('+n+')').join(' · ')+'</div>';
-  if(!L.length)h+='<h2>Manutenção</h2><p>Nenhum registro de manutenção neste mês.</p>';
+  if(!L.length)h+='<h2>Manutenção</h2><p>Nenhum registro de manutenção neste período.</p>';
   tipos.forEach(t=>{const T=L.filter(r=>(v(a,r,'Tipo')||'Outros')===t);
     h+='<h2>Manutenção '+esc(t.toLowerCase())+' · '+T.length+'</h2><table><thead><tr><th style="width:9%">Data</th><th style="width:20%">Equipamento</th><th>Defeito / serviço</th><th>Ação realizada</th><th style="width:14%">Peças usadas</th><th style="width:7%">Parado (min)</th><th style="width:10%">Responsável</th></tr></thead><tbody>'+
-      T.map(r=>'<tr><td>'+esc(br(v(a,r,'Data')))+'</td><td><b>'+esc(v(a,r,'Equipamento'))+'</b>'+(v(a,r,'Área')?'<br><small>'+esc(v(a,r,'Área'))+'</small>':'')+'</td><td>'+esc(v(a,r,'Defeito','Descrição','Serviço'))+'</td><td>'+esc(v(a,r,'Ação'))+'</td><td>'+esc(v(a,r,'Peças'))+'</td><td>'+esc(v(a,r,'Tempo parado','Tempo'))+'</td><td>'+esc(v(a,r,'Respons','Executante','Técnico'))+'</td></tr>').join('')+'</tbody></table>';});
-  const la=aba(LED_AB);const LL=la.linhas.filter(r=>ledMesDa(la,r)===mes).sort((x,y)=>String(v(la,x,'Data')).localeCompare(String(v(la,y,'Data'))));
+      T.map(r=>'<tr><td>'+esc(br(v(a,r,'Data')))+'</td><td><b>'+esc(v(a,r,'Equipamento'))+'</b>'+(v(a,r,'Área')?'<br><small>'+esc(v(a,r,'Área'))+'</small>':'')+'</td><td>'+esc(v(a,r,'Defeito','Descrição','Serviço'))+nFotosTxt('Histórico',r)+'</td><td>'+esc(v(a,r,'Ação'))+'</td><td>'+esc(v(a,r,'Peças'))+'</td><td>'+esc(v(a,r,'Tempo parado','Tempo'))+'</td><td>'+esc(v(a,r,'Respons','Executante','Técnico'))+'</td></tr>').join('')+'</tbody></table>';
+    const FT=T.map(r=>fotosRel('Histórico',a,r,'<b>'+esc(br(v(a,r,'Data')))+' · '+esc(v(a,r,'Equipamento'))+'</b> — '+esc(v(a,r,'Defeito','Descrição','Serviço')))).join('');if(FT)h+='<div style="font-weight:bold;font-size:12px;margin-top:8px">Fotos · manutenção '+esc(t.toLowerCase())+'</div>'+FT;});
+  const la=aba(LED_AB);const LL=la.linhas.filter(r=>ledIn(la,r)).sort((x,y)=>String(v(la,x,'Data')).localeCompare(String(v(la,y,'Data'))));
   const ltot=LL.reduce((s,r)=>s+(num(v(la,r,'Qtd'))||1),0);
   h+='<h2>Troca de refletores LED · '+LL.length+' registros · '+ltot+' refletores</h2>'+(LL.length?'<table><thead><tr><th style="width:9%">Data</th><th style="width:22%">Setor / local</th><th>Refletor</th><th style="width:7%">W</th><th style="width:6%">Qtd</th><th>Motivo</th><th style="width:12%">Responsável</th><th>Obs.</th></tr></thead><tbody>'+
-    LL.map(r=>'<tr><td>'+esc(br(v(la,r,'Data')))+'</td><td><b>'+esc(v(la,r,'Setor'))+'</b></td><td>'+esc(v(la,r,'Refletor'))+'</td><td>'+esc(v(la,r,'Potência'))+'</td><td>'+esc(v(la,r,'Qtd'))+'</td><td>'+esc(v(la,r,'Motivo'))+'</td><td>'+esc(v(la,r,'Respons'))+'</td><td>'+esc(v(la,r,'Observ'))+'</td></tr>').join('')+'</tbody></table>':'<p>Nenhuma troca de LED neste mês.</p>');
+    LL.map(r=>'<tr><td>'+esc(br(v(la,r,'Data')))+'</td><td><b>'+esc(v(la,r,'Setor'))+'</b></td><td>'+esc(v(la,r,'Refletor'))+'</td><td>'+esc(v(la,r,'Potência'))+'</td><td>'+esc(v(la,r,'Qtd'))+'</td><td>'+esc(v(la,r,'Motivo'))+nFotosTxt(LED_AB,r)+'</td><td>'+esc(v(la,r,'Respons'))+'</td><td>'+esc(v(la,r,'Observ'))+'</td></tr>').join('')+'</tbody></table>':'<p>Nenhuma troca de LED neste período.</p>');
+  {const FT=LL.map(r=>fotosRel(LED_AB,la,r,'<b>'+esc(br(v(la,r,'Data')))+' · '+esc(v(la,r,'Setor'))+'</b>'+(v(la,r,'Refletor')?' — '+esc(v(la,r,'Refletor')):''))).join('');if(FT)h+='<div style="font-weight:bold;font-size:12px;margin-top:8px">Fotos · troca de LED</div>'+FT;}
   h+='<div class="ass"><div>Manutenção</div><div>Supervisor / PCM</div></div>';
   return {html:h,n:L.length+LL.length};
 }
-function pdfManut(mes){const r=relManut(mes);$('#print').innerHTML=r.html;$('#print').querySelectorAll('h2').forEach(x=>x.style.cssText='font-size:14px;margin:14px 0 2px');pdfAbrir('Manutencao_'+mes.replace('-','_'));}
+async function fotosProntas(){const f=aba(FT_AB);if(navigator.onLine&&f.linhas.some(x=>!imgDe(String(x[0])))){toast('Baixando as fotos…');try{await baixaImagens(true);}catch(e){}}}
+function semanaRg(){return {de:addDias(hoje(),-6),ate:hoje()};}
+async function pdfManut(mes,rg){await fotosProntas();const r=relManut(mes,rg);$('#print').innerHTML=r.html;$('#print').querySelectorAll('h2').forEach(x=>x.style.cssText='font-size:14px;margin:14px 0 2px');
+  await Promise.all([...$('#print').querySelectorAll('img')].map(i=>i.decode?i.decode().catch(()=>{}):0));
+  pdfAbrir(rg?'Manutencao_semana_'+rg.ate:'Manutencao_'+mes.replace('-','_'));}
 async function emailManut(mes){
   if(!navigator.onLine){toast('Conecte à internet para enviar por e-mail');return;}
   if(!podeLancar()){toast('Seu usuário é só de consulta');return;}
-  const r=relManut(mes);
+  await fotosProntas();const r=relManut(mes);
   if(!confirmar('Enviar o relatório de '+mesNome(mes)+' ('+r.n+' registros) em PDF para o e-mail do administrador?'))return;
   const css='body{font:11px/1.35 Arial,Helvetica,sans-serif;color:#000}h1{font-size:17px;margin:0 0 2px}h2{font-size:13px;margin:14px 0 2px}.meta{font-size:10px;color:#333;margin-bottom:6px}table{width:100%;border-collapse:collapse;margin-top:4px}th,td{border:1px solid #999;padding:3px 5px;text-align:left;vertical-align:top}th{background:#e8efe9}.ass{margin-top:28px}.ass div{display:inline-block;width:40%;margin-right:8%;border-top:1px solid #000;padding-top:4px;font-size:10px}';
   const html='<html><head><meta charset="utf-8"><style>'+css+'</style></head><body>'+r.html+'</body></html>';
@@ -916,11 +927,11 @@ function lManutLed(V,seg){
   const a=aba(LED_AB);const mSel=S.chip?manutMesCod(S.chip):'';
   const L=a.linhas.filter(r=>(!mSel||ledMesDa(a,r)===mSel)&&busca(r.join(' '))).slice().reverse();
   const tot=L.reduce((s,r)=>s+(num(v(a,r,'Qtd'))||1),0);const set={};L.forEach(r=>{const k=v(a,r,'Setor')||'—';set[k]=1;});
-  V.innerHTML=seg+'<div class="btns" style="margin:6px 0 0"><button class="btn" id="rMapa">🗺️ Mapa de iluminação</button><button class="btn" id="rPdf">📄 PDF do mês</button><button class="btn" id="rMail">✉️ Enviar ao administrador</button><span class="note" style="align-self:center">'+esc(S.chip||('mês atual: '+mesNome(hoje().slice(0,7))))+'</span></div>'+
+  V.innerHTML=seg+'<div class="btns" style="margin:6px 0 0"><button class="btn" id="rMapa">🗺️ Mapa de iluminação</button><button class="btn" id="rPdf">📄 PDF do mês</button><button class="btn" id="rPdfS">📄 PDF da semana</button><button class="btn" id="rMail">✉️ Enviar ao administrador</button><span class="note" style="align-self:center">'+esc(S.chip||('mês atual: '+mesNome(hoje().slice(0,7))))+'</span></div>'+
     '<div class="sum"><div><b>'+tot+'</b><span>refletores trocados'+(S.chip?' em '+esc(S.chip):'')+'</span></div><div><b>'+L.length+'</b><span>registros</span></div><div><b>'+Object.keys(set).length+'</b><span>setores</span></div></div>'+
     (L.length?'<div class="list">'+L.slice(0,S.lim).map(r=>'<button class="card" data-l="'+esc(r[0])+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Setor')||'(sem setor)')+'</div><div style="font-size:14px;margin-top:2px">'+esc([v(a,r,'Refletor')?'Refletor '+v(a,r,'Refletor'):'',v(a,r,'Potência')?v(a,r,'Potência')+' W':'',v(a,r,'Motivo')].filter(Boolean).join(' · '))+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+(v(a,r,'Respons')?' · '+esc(v(a,r,'Respons')):'')+(v(a,r,'Observ')?' · '+esc(v(a,r,'Observ')):'')+'</div></div><div class="rt"><span class="tag">LED</span><div class="cm">'+esc(v(a,r,'Qtd')||'1')+' un</div>'+nFotos(LED_AB,r)+'</div></button>').join('')+'</div>'+mais(L.length)
       :'<div class="empty">Nenhuma troca de LED'+(S.chip?' em '+esc(S.chip):'')+'.'+(podeLancar()?'<br>Toque em <b>+ Troca</b> para registrar.':'')+'</div>');
-  $('#rMapa').onclick=()=>abreMapa();$('#rPdf').onclick=()=>pdfManut(mSel||hoje().slice(0,7));
+  $('#rMapa').onclick=()=>abreMapa();$('#rPdf').onclick=()=>pdfManut(mSel||hoje().slice(0,7));$('#rPdfS').onclick=()=>pdfManut('',semanaRg());
   $('#rMail').onclick=()=>emailManut(mSel||hoje().slice(0,7));
   V.onclick=e=>{const t=e.target.closest('[data-ma]');if(t){S.mAba=t.dataset.ma;S.lim=40;render();return;}const c=e.target.closest('[data-l]');if(c)formLed(c.dataset.l);};
 }
@@ -936,12 +947,12 @@ function lManutNova(V){
   const mes=hoje().slice(0,7);const doMes=L.filter(([r])=>{const d=String(v(a,r,'Data'));return d.startsWith(mes)||(/^\d{2}\/\d{2}\/\d{4}/.test(d)&&d.slice(6,10)+'-'+d.slice(3,5)===mes);});
   const parado=L.reduce((s,[r])=>s+num(v(a,r,'Tempo parado','Tempo')),0);
   let h='<div class="seg seg4">'+MANUT_ABAS.map(([k,t])=>'<button data-ma="'+k+'" aria-pressed="'+(m===k)+'">'+rotMAba(k,t)+'</button>').join('')+'</div>'+avisoProx()+
-    '<div class="btns" style="margin:6px 0 0"><button class="btn" id="rPdf">📄 PDF do mês</button><button class="btn" id="rMail">✉️ Enviar ao administrador</button><span class="note" style="align-self:center">'+esc(S.chip||('mês atual: '+mesNome(hoje().slice(0,7))))+'</span></div>'+
+    '<div class="btns" style="margin:6px 0 0"><button class="btn" id="rPdf">📄 PDF do mês</button><button class="btn" id="rPdfS">📄 PDF da semana</button><button class="btn" id="rMail">✉️ Enviar ao administrador</button><span class="note" style="align-self:center">'+esc(S.chip||('mês atual: '+mesNome(hoje().slice(0,7))))+'</span></div>'+
     '<div class="sum"><div><b>'+L.length+'</b><span>registros'+(S.chip?' em '+esc(S.chip):'')+'</span></div><div><b>'+doMes.length+'</b><span>neste mês</span></div><div><b>'+Math.round(parado)+'</b><span>min parado</span></div></div>';
   h+=L.length?'<div class="list">'+L.slice(0,S.lim).map(([r,i])=>'<button class="card" data-h="'+i+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Equipamento')||'(sem equipamento)')+'</div><div style="font-size:14px;margin-top:2px">'+esc(v(a,r,'Defeito','Descrição','Serviço','Tarefa'))+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+(v(a,r,'Área')?' · '+esc(v(a,r,'Área')):'')+(v(a,r,'Ação')?' · '+esc(v(a,r,'Ação')):'')+'</div></div><div class="rt"><span class="tag '+(norm(v(a,r,'Tipo')).includes('corret')?'w':'')+'">'+esc(v(a,r,'Tipo')||'—')+'</span>'+(num(v(a,r,'Tempo parado','Tempo'))?'<div class="cm">'+esc(v(a,r,'Tempo parado','Tempo'))+' min</div>':'')+nFotos('Histórico',r)+'</div></button>').join('')+'</div>'+mais(L.length)
     :'<div class="empty">'+(m==='hist'?'Nenhum registro de manutenção ainda.':'Nenhuma manutenção '+(m==='corr'?'corretiva':'preventiva')+' registrada.')+(podeLancar()&&m!=='hist'?'<br>Toque em <b>'+(m==='corr'?'+ Corretiva':'+ Preventiva')+'</b> para registrar.':'')+'</div>';
   V.innerHTML=h;
-  $('#rPdf').onclick=()=>pdfManut(S.chip?manutMesCod(S.chip):hoje().slice(0,7));
+  $('#rPdf').onclick=()=>pdfManut(S.chip?manutMesCod(S.chip):hoje().slice(0,7));$('#rPdfS').onclick=()=>pdfManut('',semanaRg());
   $('#rMail').onclick=()=>emailManut(S.chip?manutMesCod(S.chip):hoje().slice(0,7));
   V.onclick=e=>{
     const t=e.target.closest('[data-ma]');if(t){S.mAba=t.dataset.ma;S.lim=40;render();return;}
@@ -1236,7 +1247,11 @@ function formHist(tipoPre){
     '<label>Peças usadas</label><div style="display:flex;gap:8px"><input id="hP" class="f" placeholder="ex.: 2× B021, 1× 4820005" style="flex:1"><button type="button" class="btn" id="hPl" style="white-space:nowrap">🔩 Peças</button></div>'+
     '<label style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="hPb"> Dar baixa no estoque das peças escolhidas</label>'+
     '<label>Tempo parado (min)</label><input id="hTp" class="f" inputmode="numeric">'+
+    '<div class="box" style="margin:10px 0"><b>📷 Fotos da manutenção</b><div class="note">Pode escolher várias. Elas aparecem no registro e no PDF do mês/semana.</div><div class="ftgrid" id="hFtG"></div><div class="btns"><label class="btn">📷 Adicionar fotos<input type="file" accept="image/*" id="hFt" hidden multiple></label></div></div>'+
     '<div class="btns"><button class="btn p" id="hS">Salvar</button></div><div class="note">Sem internet, o registro fica guardado e é enviado depois.</div>');
+  let hFotos=[];const hFtDes=()=>{$('#hFtG').innerHTML=hFotos.map((f,i)=>'<button type="button" class="ftth" data-rf="'+i+'" title="Tocar para remover"><img src="'+f.u+'" alt=""><small>✕ remover</small></button>').join('');};
+  $('#hFt').onchange=ev=>{[...ev.target.files].forEach(f=>hFotos.push({f,u:URL.createObjectURL(f)}));ev.target.value='';hFtDes();};
+  $('#hFtG').onclick=ev=>{const b=ev.target.closest('[data-rf]');if(!b)return;const x=hFotos.splice(+b.dataset.rf,1)[0];if(x)URL.revokeObjectURL(x.u);hFtDes();};
   let pcsEsc=[];$('#hPl').onclick=()=>escolhePecas($('#hP'),L=>{L.forEach(x=>{const k=pcsEsc.find(y=>y.id===x.id);if(k)k.q+=x.q;else pcsEsc.push(x);});$('#hPb').checked=true;});
   const ehPrev=()=>$('#hT').value==='Preventiva'||$('#pvOpt').checked;
   const tarefasDo=()=>{const t=tagDoEquip($('#hE').value);return t?m.linhas.filter(r=>String(v(m,r,'Equipamento')).trim()===t):[];};
@@ -1277,7 +1292,10 @@ function formHist(tipoPre){
     }
     if($('#hPb').checked&&pcsEsc.length&&$('#hP').value.trim())for(const x of pcsEsc)await enfileira({tipo:'somar',aba:'Peças',id:x.id,campos:{'Estoque atual':-x.q}});
     await enfileira({tipo:'incluir',aba:'Histórico',prefixo:'H',campos:histCampos({data,tipo:$('#hT').value,equip,area:$('#hA').value,desc:$('#hDf').value.trim(),tarefa:idT,acao:$('#hAc').value.trim(),pecas:$('#hP').value.trim(),tempo:$('#hTp').value})});
-    toast(ehPrev()&&$('#pvN').value?'Salvo · próxima em '+dataBR($('#pvN').value):'Registro salvo');fecha();renderLista();
+    const msgOk=ehPrev()&&$('#pvN').value?'Salvo · próxima em '+dataBR($('#pvN').value):'Registro salvo';
+    if(hFotos.length){const ch='H:'+[data,equip,$('#hDf').value.trim()].join('|');$('#hS').disabled=true;const n=await anexaFotos(hFotos.map(x=>x.f),'Histórico',ch,true);hFotos.forEach(x=>URL.revokeObjectURL(x.u));toast(msgOk+' · '+n+' foto(s)');}
+    else toast(msgOk);
+    fecha();renderLista();
   };
 }
 /* ---- Compras ---- */
