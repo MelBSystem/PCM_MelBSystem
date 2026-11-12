@@ -145,6 +145,7 @@ body.mapon{overflow:hidden}body.mapon #sheet,body.mapon #toast{z-index:60}body.m
 .lp.n1{background:#FACC15}.lp.n2{background:#F97316;color:#fff}.lp.n3{background:#DC2626;color:#fff;border-color:#7f1d1d}
 .lp.ag{outline:3px dashed #2F5DA8;outline-offset:2px}.lp.sel{box-shadow:0 0 0 4px rgba(227,95,10,.6)!important}
 .lp.off{opacity:.45}
+.lp.pd{border-color:#DC2626;border-style:dashed}.lp.pd::after{content:'!';position:absolute;top:-9px;right:-9px;width:16px;height:16px;border-radius:50%;background:#DC2626;color:#fff;font:700 11px/16px system-ui;text-align:center;border:1px solid #fff}
 .fe{position:absolute;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:5px;opacity:.9;color:#fff;font:700 11px/18px system-ui;text-align:center;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);pointer-events:none;z-index:1}
 .fe.C{background:#E35F0A}.fe.S{background:#B42318}.fe.R{background:#2F5DA8}
 .pl{position:absolute;z-index:1}.pl.ed{cursor:pointer}
@@ -356,6 +357,7 @@ function aplicaLocal(op){
   if(op.tipo==='imagem'){S.img[op.imgKey]=op.b64;put('img',op.imgKey,op.b64);return;}
   if(op.tipo==='config'){if(!S.d.abas[CFG_AB])S.d.abas[CFG_AB]={cab:['Chave','Valor','Alterado por / em'],linhas:[]};const c=S.d.abas[CFG_AB];const i=c.linhas.findIndex(x=>String(x[0])===op.chave);if(op.valor===''||op.valor==null){if(i>=0)c.linhas.splice(i,1);}else if(i>=0)c.linhas[i][1]=op.valor;else c.linhas.push([op.chave,op.valor,'']);return;}
   if(op.tipo==='excluir'&&op.aba==='imagens_app'){delete S.img[op.id];del('img',op.id);if(S.d.imgApp){const k=S.d.imgApp.indexOf(op.id);if(k>=0)S.d.imgApp.splice(k,1);}return;}
+  if(op.aba===LED_AB&&S.d.abas[LED_AB]&&S.d.abas[LED_AB].cab.length&&S.d.abas[LED_AB].cab.indexOf('Status')<0){S.d.abas[LED_AB].cab.push('Status');S.d.abas[LED_AB].linhas.forEach(x=>x.push(''));}
   if(op.aba===LED_AB&&S.d.abas[LED_AB]&&S.d.abas[LED_AB].cab.length&&S.d.abas[LED_AB].cab.indexOf('Modelo instalado')<0){S.d.abas[LED_AB].cab.push('Modelo instalado');S.d.abas[LED_AB].linhas.forEach(x=>x.push(''));}
   if(op.aba===PT_AB&&S.d.abas[PT_AB]&&S.d.abas[PT_AB].cab.length&&S.d.abas[PT_AB].cab.indexOf('Modelo')<0){S.d.abas[PT_AB].cab.push('Modelo');S.d.abas[PT_AB].linhas.forEach(x=>x.push(''));}
   if(op.aba===PT_AB&&!(S.d.abas[PT_AB]&&S.d.abas[PT_AB].cab.length))S.d.abas[PT_AB]={cab:PT_CAB.slice(),linhas:[]};
@@ -856,7 +858,7 @@ function fotosRel(nAba,a,r,rot){const F=fotosDe(nAba,regChave(nAba,r)).map(x=>({
   return '<div style="page-break-inside:avoid;margin:10px 0 2px"><div style="font-size:11px;margin-bottom:2px">'+rot+'</div>'+F.map(o=>'<div style="display:inline-block;width:31%;margin:3px 1.5% 3px 0;vertical-align:top;font-size:10px"><img src="data:image/jpeg;base64,'+o.b+'" style="width:100%;max-height:220px;object-fit:contain;border:1px solid #999" alt="">'+(o.l?'<div>'+esc(o.l)+'</div>':'')+'</div>').join('')+'</div>';}
 function nFotosTxt(nAba,r){const n=fotosDe(nAba,regChave(nAba,r)).length;return n?' <small>(📷 '+n+' foto'+(n>1?'s':'')+' abaixo)</small>':'';}
 function relManut(mes,rg){
-  const dentro=d=>rg?(isoDe(d)>=rg.de&&isoDe(d)<=rg.ate):mesDe(d)===mes;const ledIn=(la_,r)=>rg?dentro(v(la_,r,'Data')):ledMesDa(la_,r)===mes;const perNome=rg?('semana de '+dataBR(rg.de)+' a '+dataBR(rg.ate)):mesNome(mes);
+  const dentro=d=>rg?(isoDe(d)>=rg.de&&isoDe(d)<=rg.ate):mesDe(d)===mes;const ledIn=(la_,r)=>!ledPend(la_,r)&&(rg?dentro(v(la_,r,'Data')):ledMesDa(la_,r)===mes);const perNome=rg?('semana de '+dataBR(rg.de)+' a '+dataBR(rg.ate)):mesNome(mes);
   const a=aba('Histórico');const L=a.linhas.filter(r=>dentro(v(a,r,'Data'))).sort((x,y)=>String(mesDe(v(a,x,'Data'))+v(a,x,'Data')).localeCompare(mesDe(v(a,y,'Data'))+v(a,y,'Data')));
   const dia=d=>{d=String(d);return /^\d{4}-\d{2}-\d{2}/.test(d)?d.slice(8,10):d.slice(0,2);};L.sort((x,y)=>rg?isoDe(v(a,x,'Data')).localeCompare(isoDe(v(a,y,'Data'))):dia(v(a,x,'Data')).localeCompare(dia(v(a,y,'Data'))));
   const tipos=[];L.forEach(r=>{const t=v(a,r,'Tipo')||'Outros';if(tipos.indexOf(t)<0)tipos.push(t);});
@@ -903,7 +905,8 @@ function isoDe(x){x=String(x||'').trim();if(!x)return '';let m=x.match(/^(\d{4})
 function proxDaTarefa(a,r){const u=isoDe(v(a,r,'Última execução','Última')),d=num(v(a,r,'Dias'));if(u&&d>0)return addDias(u,d);return isoDe(v(a,r,'Próxima'));}
 function proximas(){const a=aba(MN),h=hoje();return a.linhas.map(r=>{const p=proxDaTarefa(a,r);return p?{r,id:String(r[0]),prox:p,falta:difDias(h,p)}:null;}).filter(Boolean).sort((x,y)=>x.prox.localeCompare(y.prox));}
 function nAvisos(){return proximas().filter(x=>x.falta<=AVISO_DIAS).length;}
-function atualizaBadge(){const b=document.querySelector('.nb[data-t=manut]');if(!b)return;let e=b.querySelector('.bdg');const n=S.d&&S.d.abas?nAvisos():0;if(!n){if(e)e.remove();return;}if(!e){e=document.createElement('span');e.className='bdg';b.appendChild(e);}e.textContent=n>99?'99+':n;b.setAttribute('aria-label','Manutenção – '+n+' manutenção(ões) próxima(s)');}
+function atualizaBadge(){{const b=document.querySelector('.nb[data-t=led]');if(b){let e=b.querySelector('.bdg');const n=S.d&&S.d.abas?ledPendentes().length:0;if(!n){if(e)e.remove();}else{if(!e){e=document.createElement('span');e.className='bdg';b.appendChild(e);}e.textContent=n>99?'99+':n;}}}
+  const b=document.querySelector('.nb[data-t=manut]');if(!b)return;let e=b.querySelector('.bdg');const n=S.d&&S.d.abas?nAvisos():0;if(!n){if(e)e.remove();return;}if(!e){e=document.createElement('span');e.className='bdg';b.appendChild(e);}e.textContent=n>99?'99+':n;b.setAttribute('aria-label','Manutenção – '+n+' manutenção(ões) próxima(s)');}
 function rotMAba(k,t){if(k!=='prox')return esc(t);const n=nAvisos();return esc(t)+(n?' <span class="tag c">'+n+'</span>':'');}
 function avisoProx(){const n=nAvisos();if(!n)return '';const L=proximas().filter(x=>x.falta<=AVISO_DIAS);const at=L.filter(x=>x.falta<0).length;
   return '<button class="aviso" data-ma="prox">⚠️<span><b>'+n+' manutenç'+(n===1?'ão':'ões')+' próxima'+(n===1?'':'s')+'</b>'+(at?' ('+at+' atrasada'+(at===1?'':'s')+')':'')+' — toque para ver e organizar a equipe.</span></button>';}
@@ -925,7 +928,7 @@ function lManutProx(V,seg){
 }
 function lManutLed(V,seg){
   const a=aba(LED_AB);const mSel=S.chip?manutMesCod(S.chip):'';
-  const L=a.linhas.filter(r=>(!mSel||ledMesDa(a,r)===mSel)&&busca(r.join(' '))).slice().reverse();
+  const L=a.linhas.filter(r=>!ledPend(a,r)&&(!mSel||ledMesDa(a,r)===mSel)&&busca(r.join(' '))).slice().reverse();
   const tot=L.reduce((s,r)=>s+(num(v(a,r,'Qtd'))||1),0);const set={};L.forEach(r=>{const k=v(a,r,'Setor')||'—';set[k]=1;});
   V.innerHTML=seg+'<div class="btns" style="margin:6px 0 0"><button class="btn" id="rMapa">🗺️ Mapa de iluminação</button><button class="btn" id="rPdf">📄 PDF do mês</button><button class="btn" id="rPdfS">📄 PDF da semana</button><button class="btn" id="rMail">✉️ Enviar ao administrador</button><span class="note" style="align-self:center">'+esc(S.chip||('mês atual: '+mesNome(hoje().slice(0,7))))+'</span></div>'+
     '<div class="sum"><div><b>'+tot+'</b><span>refletores trocados'+(S.chip?' em '+esc(S.chip):'')+'</span></div><div><b>'+L.length+'</b><span>registros</span></div><div><b>'+Object.keys(set).length+'</b><span>setores</span></div></div>'+
@@ -1586,7 +1589,51 @@ const LED_AB='Refletores LED';
 const mesDe=d=>{const m=String(d||'').match(/^(\d{4})-(\d{2})/)||String(d||'').match(/^\d{2}\/(\d{2})\/(\d{4})/);if(!m)return '';return m[0].indexOf('/')>0?m[2]+'-'+m[1]:m[1]+'-'+m[2];};
 const MESES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 const mesNome=m=>{const p=String(m).split('-');return p.length===2?MESES[+p[1]-1]+'/'+p[0]:m;};
-function ledMesDa(a,r){return v(a,r,'Mês')||mesDe(v(a,r,'Data'));}
+function ledPend(a,r){return /^pend/i.test(String(v(a,r,'Status')||'').trim());}
+function ledMesDa(a,r){return ledPend(a,r)?'':(v(a,r,'Mês')||mesDe(v(a,r,'Data')));}
+function ledPendentes(){const a=aba(LED_AB);return a.linhas.filter(r=>ledPend(a,r));}
+function pendDoPonto(id){const a=aba(LED_AB);return ledPendentes().filter(r=>String(v(a,r,'Refletor')).trim().toUpperCase()===String(id).toUpperCase());}
+function diasDesde(d){const i=isoDe(d);return i?Math.max(0,difDias(i,hoje())):0;}
+function cardPend(a,r){const id=String(r[0]);const fc=fotoCapa(LED_AB,id);const n=diasDesde(v(a,r,'Data'));
+  return '<button class="card" data-pd="'+esc(id)+'">'+(fc?thumb(fc):'')+'<div class="ci"><div class="cd">'+esc(v(a,r,'Setor'))+(v(a,r,'Refletor')?' · '+esc(v(a,r,'Refletor')):'')+'</div><div class="cm">'+esc(v(a,r,'Motivo'))+' · avisado em '+esc(br(v(a,r,'Data')))+(v(a,r,'Respons')?' por '+esc(v(a,r,'Respons')):'')+'</div>'+(v(a,r,'Observação')?'<div class="cm">'+esc(v(a,r,'Observação'))+'</div>':'')+'</div><div class="rt"><span class="tag '+(n>=7?'c':'w')+'">'+(n===0?'hoje':n===1?'há 1 dia':'há '+n+' dias')+'</span><div class="cm">'+esc(v(a,r,'Qtd')||'1')+' un</div></div></button>';}
+function blocoPend(){const a=aba(LED_AB);const P=ledPendentes().filter(r=>busca(r.join(' '))).sort((x,y)=>isoDe(v(a,x,'Data')).localeCompare(isoDe(v(a,y,'Data'))));
+  return '<div class="bar"><span>⏳ Trocas pendentes · '+P.length+'</span>'+(podeLancar()?'<button class="lnk" id="pendAdd">+ Pendência</button>':'')+'</div>'+(P.length?'<div class="list">'+P.map(r=>cardPend(a,r)).join('')+'</div>':'<div class="note" style="margin:0 0 8px">Nenhuma troca pendente. Viu um refletor queimado? Toque em <b>+ Pendência</b>, tire a foto e ele fica aqui até ser trocado.</div>');}
+function ligaPend(V){const b=V.querySelector('#pendAdd');if(b)b.onclick=()=>formPend();V.querySelectorAll('[data-pd]').forEach(c=>c.onclick=()=>detPend(c.dataset.pd));}
+function formPend(pre){pre=pre||{};
+  if(!podeLancar()){toast('Seu usuário é só de consulta');return;}
+  const a=aba(LED_AB);const setores=[...new Set(a.linhas.map(x=>v(a,x,'Setor')).filter(Boolean).concat(pontos().map(p=>p.reg).filter(Boolean)))].sort();
+  abre('<div class="ph"><b>⏳ Nova troca pendente</b><button class="lnk" data-x>Fechar</button></div>'+
+    '<div class="note">Registre o refletor com defeito. Ele fica na lista de pendências até alguém concluir a troca.</div>'+
+    '<label>Setor / local *</label><input id="pS" class="f" list="dlPS" placeholder="ex.: Sala de abate – teto"><datalist id="dlPS">'+setores.map(e=>'<option value="'+esc(e)+'">').join('')+'</datalist>'+
+    '<div class="two"><div><label>Refletor (ponto no mapa)</label><input id="pR" class="f" list="dlPR" value="'+esc(pre.ponto||'')+'" placeholder="opcional, ex.: R012"><datalist id="dlPR">'+pontos().map(p=>'<option value="'+esc(p.id)+'">'+esc(p.reg+(p.desc?' · '+p.desc:''))+'</option>').join('')+'</datalist></div><div><label>Qtd</label><input id="pQ" class="f" inputmode="numeric" value="1"></div></div>'+
+    '<label>Problema</label><select id="pM" class="f">'+['Queimado','Oscilando / piscando','Dano físico','Infiltração / umidade','Outro'].map(o=>'<option>'+o+'</option>').join('')+'</select>'+
+    '<label>Observação</label><input id="pO" class="f" placeholder="ex.: 2º refletor depois da serra de peito">'+
+    '<div class="box" style="margin:10px 0"><b>📷 Fotos</b><div class="ftgrid" id="pFtG"></div><div class="btns"><label class="btn">📷 Adicionar fotos<input type="file" accept="image/*" id="pFt" hidden multiple></label></div></div>'+
+    '<div class="btns"><button class="btn p" id="pSv">Salvar pendência</button></div>');
+  let F=[];const des=()=>{$('#pFtG').innerHTML=F.map((f,i)=>'<button type="button" class="ftth" data-rf="'+i+'"><img src="'+f.u+'" alt=""><small>✕ remover</small></button>').join('');};
+  $('#pFt').onchange=ev=>{[...ev.target.files].forEach(f=>F.push({f,u:URL.createObjectURL(f)}));ev.target.value='';des();};
+  $('#pFtG').onclick=ev=>{const b=ev.target.closest('[data-rf]');if(!b)return;const x=F.splice(+b.dataset.rf,1)[0];if(x)URL.revokeObjectURL(x.u);des();};
+  const pp=()=>{const p=pontos().find(x=>x.id.toUpperCase()===$('#pR').value.trim().toUpperCase());if(p&&!$('#pS').value.trim())$('#pS').value=p.reg;};$('#pR').addEventListener('change',pp);$('#pR').addEventListener('input',pp);pp();
+  $('#pSv').onclick=async()=>{
+    const setor=$('#pS').value.trim();if(!setor){toast('Informe o setor / local');return;}
+    $('#pSv').disabled=true;const id='LED'+String(Date.now()).slice(-6);
+    await enfileira({tipo:'incluir',aba:LED_AB,campos:{ID:id,'Data da troca':hoje(),'Setor / local':setor,'Refletor (identificação)':$('#pR').value.trim(),'Qtd':num($('#pQ').value)||1,'Motivo':$('#pM').value,'Observação':$('#pO').value.trim(),'Responsável':S.user.nome,'Status':'Pendente'}});
+    if(F.length){await anexaFotos(F.map(x=>x.f),LED_AB,id,true);F.forEach(x=>URL.revokeObjectURL(x.u));}
+    toast('Pendência registrada');fecha();if($('#mapV')&&!$('#mapV').hidden)mapaDesenha();render();
+  };
+}
+function detPend(id){
+  const a=aba(LED_AB);const r=a.linhas.find(x=>String(x[0])===String(id));if(!r)return;const n=diasDesde(v(a,r,'Data'));
+  abre('<div class="ph"><b>⏳ Troca pendente '+esc(id)+'</b><button class="lnk" data-x>Fechar</button></div>'+
+    '<div class="kv"><b>Setor / local</b><span>'+esc(v(a,r,'Setor'))+'</span>'+(v(a,r,'Refletor')?'<b>Refletor</b><span>'+esc(v(a,r,'Refletor'))+'</span>':'')+'<b>Problema</b><span>'+esc(v(a,r,'Motivo'))+'</span><b>Qtd</b><span>'+esc(v(a,r,'Qtd')||'1')+'</span><b>Avisado</b><span>'+esc(br(v(a,r,'Data')))+(v(a,r,'Respons')?' por '+esc(v(a,r,'Respons')):'')+' ('+(n===0?'hoje':'há '+n+' dia'+(n>1?'s':''))+')</span>'+(v(a,r,'Observação')?'<b>Obs.</b><span>'+esc(v(a,r,'Observação'))+'</span>':'')+'</div>'+
+    blocoFotosV(LED_AB,String(id),'Fotos')+
+    (podeLancar()?'<div class="btns"><button class="btn p" id="pdOk">✅ Concluir troca</button>'+(pontos().some(p=>p.id.toUpperCase()===String(v(a,r,'Refletor')).trim().toUpperCase())?'<button class="btn" id="pdMp">🗺️ Ver no mapa</button>':'')+(isAdm()?'<button class="btn" id="pdX" style="color:var(--cr)">🗑️ Excluir pendência</button>':'')+'</div>':'')+
+    '<div class="note">Ao concluir, a pendência vira uma troca registrada no mês, com o modelo instalado e a baixa no estoque.</div>');
+  ligaFotosV($('#pane'),()=>{detPend(id);renderLista();});
+  if($('#pdOk'))$('#pdOk').onclick=()=>formLed(null,{pend:String(id)});
+  if($('#pdMp'))$('#pdMp').onclick=()=>{fecha();abreMapa(String(v(a,r,'Refletor')).trim().toUpperCase());};
+  if($('#pdX'))$('#pdX').onclick=()=>excluirLinha(LED_AB,r,'a pendência '+id);
+}
 function ledMeses(){const a=aba(LED_AB);const atual=hoje().slice(0,7);const set=new Set([atual]);a.linhas.forEach(r=>{const m=ledMesDa(a,r);if(m)set.add(m);});return [...set].sort().reverse().map(mesNome);}
 function lLed(V){
   const a=aba(LED_AB);
@@ -1595,11 +1642,11 @@ function lLed(V){
   const L=a.linhas.filter(r=>mesNome(ledMesDa(a,r))===sel&&busca(r.join(' ')));
   const tot=L.reduce((s,r)=>s+(num(v(a,r,'Qtd'))||1),0);
   const set={};L.forEach(r=>{const k=v(a,r,'Setor')||'—';set[k]=(set[k]||0)+(num(v(a,r,'Qtd'))||1);});
-  V.innerHTML='<button class="aviso" id="ledMapa" style="background:var(--sf);color:inherit;border-color:var(--ln)">🗺️<span><b style="color:var(--ac)">Mapa de iluminação</b> — pontos dos refletores, trocas por região e agendamentos</span></button><div class="sum"><div><b>'+tot+'</b><span>refletores trocados</span></div><div><b>'+L.length+'</b><span>registros</span></div><div><b>'+Object.keys(set).length+'</b><span>setores</span></div></div>'+
+  V.innerHTML='<button class="aviso" id="ledMapa" style="background:var(--sf);color:inherit;border-color:var(--ln)">🗺️<span><b style="color:var(--ac)">Mapa de iluminação</b> — pontos dos refletores, trocas por região e agendamentos</span></button>'+blocoPend()+'<div class="sum"><div><b>'+tot+'</b><span>refletores trocados</span></div><div><b>'+L.length+'</b><span>registros</span></div><div><b>'+Object.keys(set).length+'</b><span>setores</span></div></div>'+
     (L.length?'<div class="note">'+Object.keys(set).sort().map(k=>esc(k)+': '+set[k]).join(' · ')+'</div>':'')+
     '<div class="bar"><span>'+esc(sel)+'</span>'+(L.length?'<button class="lnk" id="ledPdf">PDF do mês</button>':'')+'</div>'+
     (L.length?'<div class="list">'+L.slice().reverse().map(r=>'<button class="card" data-l="'+esc(r[0])+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Setor'))+(v(a,r,'Refletor')?' · '+esc(v(a,r,'Refletor')):'')+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+' · '+esc(v(a,r,'Motivo'))+(v(a,r,'Potência')?' · '+esc(v(a,r,'Potência'))+' W':'')+'</div><div class="cm">'+esc(v(a,r,'Respons'))+(v(a,r,'Modelo')?' · '+esc(v(a,r,'Modelo')):'')+'</div></div><div class="rt">'+esc(v(a,r,'Qtd')||'1')+'<div class="cm">un</div></div></button>').join('')+'</div>':'<div class="empty">Nenhuma troca registrada em '+esc(sel)+'.<br>Toque em <b>+ Troca</b>.</div>');
-  V.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>formLed(b.dataset.l));$('#ledMapa').onclick=()=>abreMapa();
+  V.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>formLed(b.dataset.l));$('#ledMapa').onclick=()=>abreMapa();ligaPend(V);
   const pb=$('#ledPdf');if(pb)pb.onclick=()=>pdfLed(sel,L);
 }
 function formLed(id,pre){pre=pre||{};
@@ -1607,9 +1654,10 @@ function formLed(id,pre){pre=pre||{};
   if(id&&!isAdm()){const a0=aba(LED_AB);const r0=a0.linhas.find(x=>String(x[0])===String(id));if(r0)abre('<div class="ph"><b>Troca '+esc(id)+'</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a0.cab.map((c,i)=>r0[i]!==''?'<b>'+esc(c)+'</b><span>'+esc(r0[i])+'</span>':'').join('')+'</div><div class="note">Só o administrador edita ou exclui registros.</div>'+blocoFotos(LED_AB,r0));ligaFotos(LED_AB,r0,()=>formLed(id));return;}
   const a=aba(LED_AB);const r=id?a.linhas.find(x=>String(x[0])===String(id)):null;
   const setores=[...new Set(a.linhas.map(x=>v(a,x,'Setor')).filter(Boolean))].sort();
-  const g=k=>r?v(a,r,k):'';
+  const pd=!r&&pre.pend?a.linhas.find(x=>String(x[0])===String(pre.pend)):null;if(pd&&!pre.ponto&&v(a,pd,'Refletor'))pre.ponto=String(v(a,pd,'Refletor')).trim();
+  const g=k=>r?v(a,r,k):(pd&&!/^data/i.test(k)?v(a,pd,k):'');
   const dIso=r?(()=>{const d=g('Data');const m=d.match(/^(\d{2})\/(\d{2})\/(\d{4})/);return m?m[3]+'-'+m[2]+'-'+m[1]:d;})():hoje();
-  abre('<div class="ph"><b>'+(r?'Troca '+esc(id):'Nova troca de refletor')+'</b><button class="lnk" data-x>Fechar</button></div>'+
+  abre('<div class="ph"><b>'+(r?'Troca '+esc(id):pd?'✅ Concluir troca pendente':'Nova troca de refletor')+'</b><button class="lnk" data-x>Fechar</button></div>'+
     '<div class="two"><div><label>Data da troca</label><input id="lD" class="f" type="date" value="'+esc(dIso)+'"></div><div><label>Qtd</label><input id="lQ" class="f" inputmode="numeric" value="'+esc(g('Qtd')||'1')+'"></div></div>'+
     '<label>Setor / local</label><input id="lS" class="f" list="dlLS" value="'+esc(g('Setor'))+'" placeholder="ex.: Sala de abate – teto"><datalist id="dlLS">'+setores.map(e=>'<option value="'+esc(e)+'">').join('')+'</datalist>'+
     '<div class="two"><div><label>Refletor (ponto no mapa)</label><input id="lR" class="f" list="dlLR" value="'+esc(g('Refletor')||pre.ponto||'')+'" placeholder="ex.: R012"><datalist id="dlLR">'+pontos().map(p=>'<option value="'+esc(p.id)+'">'+esc(p.reg+(p.desc?' · '+p.desc:''))+'</option>').join('')+'</datalist></div><div><label>Potência (W)</label><input id="lP" class="f" inputmode="numeric" value="'+esc(g('Potência'))+'"></div></div>'+
@@ -1630,11 +1678,13 @@ function formLed(id,pre){pre=pre||{};
     const c={'Data da troca':d,'Mês':d.slice(0,7),'Setor / local':$('#lS').value.trim(),'Refletor (identificação)':$('#lR').value.trim(),'Potência (W)':$('#lP').value.trim(),'Qtd':num($('#lQ').value)||1,'Motivo':$('#lM').value,'Observação':$('#lO').value.trim(),'Modelo instalado':$('#lMd').value.trim()};
     if(!c['Setor / local']){toast('Informe o setor / local');return;}
     if(r) await enfileira({tipo:'atualizar',aba:LED_AB,id,campos:c});
-    else { c.ID='LED'+String(Date.now()).slice(-6); c['Responsável']=S.user.nome; const baixa=$('#lBx')&&$('#lBx').checked; await enfileira({tipo:'incluir',aba:LED_AB,campos:c});
+    else { const baixa=$('#lBx')&&$('#lBx').checked;
+      if(pd){const av='Avisado por '+(v(a,pd,'Respons')||'—')+' em '+br(v(a,pd,'Data'));c['Observação']=[c['Observação'],c['Observação'].indexOf('Avisado por')<0?av:''].filter(Boolean).join(' · ');c['Responsável']=S.user.nome;c['Status']='Concluída';await enfileira({tipo:'atualizar',aba:LED_AB,id:String(pre.pend),campos:c});}
+      else{c.ID='LED'+String(Date.now()).slice(-6); c['Responsável']=S.user.nome; await enfileira({tipo:'incluir',aba:LED_AB,campos:c});}
       const pc=pecaDoModelo(c['Modelo instalado']);if(pc&&baixa)await enfileira({tipo:'somar',aba:'Peças',id:String(pc[0]),campos:{'Estoque atual':-c.Qtd}});
       const pt=c['Modelo instalado']?pontos().find(x=>x.id.toUpperCase()===c['Refletor (identificação)'].toUpperCase()):null;
       if(pt&&(pt.modelo!==c['Modelo instalado']||(c['Potência (W)']&&String(pt.pot)!==c['Potência (W)']))){const cp={'Modelo':c['Modelo instalado']};if(c['Potência (W)'])cp['Potência (W)']=c['Potência (W)'];await enfileira({tipo:'atualizar',aba:PT_AB,id:pt.id,campos:cp});} }
-    toast('Troca registrada em '+mesNome(c['Mês']));fecha();if($('#mapV')&&!$('#mapV').hidden){mapaDesenha();if(pre.ponto)detPonto(pre.ponto);return;}S.chip=mesNome(c['Mês']);render();
+    toast((pd?'Pendência concluída · troca registrada em ':'Troca registrada em ')+mesNome(c['Mês']));fecha();if($('#mapV')&&!$('#mapV').hidden){mapaDesenha();if(pre.ponto)detPonto(pre.ponto);return;}S.chip=mesNome(c['Mês']);render();
   };
 }
 function pdfLed(mes,L){
@@ -1679,7 +1729,7 @@ function campoModelo(id,val,rot){return '<label>'+rot+'</label><div style="displ
 function ligaModelo(id,potInp,depois){const inp=$('#'+id);const ap=()=>{const p=potDoModelo(inp.value);if(p&&potInp)potInp.value=p;if(depois)depois();};inp.addEventListener('change',ap);inp.addEventListener('input',()=>{if(depois)depois();});$('#'+id+'B').onclick=()=>escolheModelo(inp);}
 function pfc(x){const n=parseFloat(String(x==null?'':x).trim().replace(',','.'));return isNaN(n)?50:Math.max(0,Math.min(100,n));}
 function pontos(){const a=aba(PT_AB);return a.linhas.map(r=>({id:String(r[0]),mapa:v(a,r,'Mapa')||'EVISC',reg:v(a,r,'Região'),desc:v(a,r,'Descrição'),x:pfc(v(a,r,'X')),y:pfc(v(a,r,'Y')),pot:v(a,r,'Potência'),qtd:v(a,r,'Qtd')||'1',ativo:!/^n/i.test(v(a,r,'Ativo')||'Sim'),obs:v(a,r,'Observação'),modelo:v(a,r,'Modelo'),r}));}
-function trocasDe(id,dias){const a=aba(LED_AB);const lim=dias>0?addDias(hoje(),-dias):'';return a.linhas.filter(r=>String(v(a,r,'Refletor')).trim().toUpperCase()===String(id).toUpperCase()&&(!lim||isoDe(v(a,r,'Data'))>=lim));}
+function trocasDe(id,dias){const a=aba(LED_AB);const lim=dias>0?addDias(hoje(),-dias):'';return a.linhas.filter(r=>!ledPend(a,r)&&String(v(a,r,'Refletor')).trim().toUpperCase()===String(id).toUpperCase()&&(!lim||isoDe(v(a,r,'Data'))>=lim));}
 function qtdTrocas(L){const a=aba(LED_AB);return L.reduce((s_,r)=>s_+(num(v(a,r,'Qtd'))||1),0);}
 function tarefaPonto(id){const a=aba(MN);return a.linhas.find(r=>norm(v(a,r,'Equipamento'))==='iluminacao'&&new RegExp('\\b'+id+'\\b','i').test(v(a,r,'Tarefa')));}
 function regioesIlum(){const s_=new Set();pontos().forEach(p=>p.reg&&s_.add(p.reg));const a=aba(LED_AB);a.linhas.forEach(r=>{const x=v(a,r,'Setor');if(x)s_.add(x);});return [...s_].sort((x,y)=>x.localeCompare(y,'pt'));}
@@ -1751,14 +1801,14 @@ function mapaDesenha(){
   $('#mpLn').innerHTML=(M.perf?perfilados().map(l=>'<div class="pl '+l.o+(adm?' ed':'')+(M.lnSel===l.id?' sel':'')+'" data-ln="'+esc(l.id)+'" style="'+(l.o==='h'?'left:'+l.a+'%;width:'+(l.b-l.a)+'%;top:'+l.p+'%':'top:'+l.a+'%;height:'+(l.b-l.a)+'%;left:'+l.p+'%')+'">'+(l.n?'<span>'+esc(l.n)+'</span>':'')+'</div>').join(''):'')+(M.p1?'<div class="p1" style="left:'+M.p1.x+'%;top:'+M.p1.y+'%"></div>':'');
   $('#mpFl').innerHTML=M.fluxo?ETAPAS_EVISC.map(([n,t,ti,x,y])=>'<div class="fe '+t+'" style="left:'+x+'%;top:'+y+'%" title="'+esc(ti)+'">'+n+'</div>').join(''):'';
   $('#mpPt').innerHTML=P.map(p=>{const n=C[p.id];const cl=n>=3?'n3':n===2?'n2':n===1?'n1':'';const halo=n?'box-shadow:0 0 0 '+(4+Math.min(n,8)*4)+'px rgba(220,38,38,'+(0.12+Math.min(n,8)*0.03)+')':'';
-    return '<div class="lp '+cl+(ag[p.id]?' ag':'')+(p.ativo?'':' off')+(M.sel===p.id?' sel':'')+'" data-pt="'+esc(p.id)+'" style="left:'+p.x+'%;top:'+p.y+'%;'+halo+'" title="'+esc(p.id+' · '+p.reg+(n?' · '+n+' troca(s)':''))+'">'+esc(p.id.replace(/^R0*/,'R'))+'</div>';}).join('');
+    return '<div class="lp '+cl+(pendDoPonto(p.id).length?' pd':'')+(ag[p.id]?' ag':'')+(p.ativo?'':' off')+(M.sel===p.id?' sel':'')+'" data-pt="'+esc(p.id)+'" style="left:'+p.x+'%;top:'+p.y+'%;'+halo+'" title="'+esc(p.id+' · '+p.reg+(n?' · '+n+' troca(s)':''))+'">'+esc(p.id.replace(/^R0*/,'R'))+'</div>';}).join('');
   /* painel: ranking por região e pontos mais trocados */
   const per=MP_PER.find(x=>x[0]===M.per)[1];
   const reg={};P.forEach(p=>{const k=p.reg||'(sem região)';reg[k]=reg[k]||{t:0,p:0};reg[k].t+=C[p.id];reg[k].p++;});
   const RK=Object.entries(reg).sort((a_,b_)=>b_[1].t-a_[1].t);const max=Math.max(1,...RK.map(x=>x[1].t));
   const tot=P.reduce((s_,p)=>s_+C[p.id],0);
   const a=aba(LED_AB);const ids=new Set(P.map(p=>p.id.toUpperCase()));const lim=dias>0?addDias(hoje(),-dias):'';
-  const semPonto=a.linhas.filter(r=>(!lim||isoDe(v(a,r,'Data'))>=lim)&&!ids.has(String(v(a,r,'Refletor')).trim().toUpperCase()));
+  const semPonto=a.linhas.filter(r=>!ledPend(a,r)&&(!lim||isoDe(v(a,r,'Data'))>=lim)&&!ids.has(String(v(a,r,'Refletor')).trim().toUpperCase()));
   const top=P.filter(p=>C[p.id]).sort((x,y)=>C[y.id]-C[x.id]).slice(0,6);
   const agL=Object.keys(ag);
   $('#mpPan').innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><b>Trocas · '+esc(per)+': '+tot+'</b><button class="lnk" id="mpMin">Mostrar/ocultar</button></div><div class="mpcorpo">'+
@@ -1836,11 +1886,13 @@ function detPonto(id){
     '<div class="kv"><b>Região</b><span>'+esc(p_.reg||'—')+'</span>'+(p_.desc?'<b>Local</b><span>'+esc(p_.desc)+'</span>':'')+(p_.modelo?'<b>Modelo</b><span>'+esc(p_.modelo)+'</span>':'')+(p_.pot?'<b>Potência</b><span>'+esc(p_.pot)+' W</span>':'')+'<b>Luminárias</b><span>'+esc(p_.qtd)+'</span>'+(p_.obs?'<b>Obs.</b><span>'+esc(p_.obs)+'</span>':'')+(p_.ativo?'':'<b>Situação</b><span>Inativo</span>')+
     '<b>Trocas</b><span>'+qtdTrocas(L)+' no total · '+qtdTrocas(trocasDe(id,365))+' em 12 meses</span>'+
     '<b>Manutenção</b><span>'+(px?esc(dataBR(px.prox))+' ('+esc(faltaTxt(px.falta))+')'+(t?' · a cada '+num(v(m,t,'Dias'))+' dias':''):'sem agendamento')+'</span></div>'+
-    (podeLancar()?'<div class="btns"><button class="btn p" id="pdTr">💡 Registrar troca</button><button class="btn" id="pdAg">🗓️ '+(t?'Alterar agendamento':'Agendar manutenção')+'</button></div>':'')+
+    (pendDoPonto(id).length?'<div class="note" style="color:#DC2626">⚠️ Troca pendente desde '+esc(br(v(a,pendDoPonto(id)[0],'Data')))+' ('+esc(v(a,pendDoPonto(id)[0],'Motivo'))+'). Ao registrar a troca, a pendência é concluída.</div>':'')+
+    (podeLancar()?'<div class="btns"><button class="btn p" id="pdTr">💡 Registrar troca</button>'+(pendDoPonto(id).length?'':'<button class="btn" id="pdPd">⏳ Avisar defeito (pendente)</button>')+'<button class="btn" id="pdAg">🗓️ '+(t?'Alterar agendamento':'Agendar manutenção')+'</button></div>':'')+
     (adm?'<div class="btns" style="margin-top:0"><button class="btn" id="pdEd">✏️ Editar</button><button class="btn" id="pdMv">📍 Mover</button><button class="btn" id="pdDl" style="color:var(--cr)">🗑️ Excluir</button></div>':'')+
     '<div class="grp" style="margin-top:8px">Histórico de trocas · '+L.length+'</div>'+(L.length?'<div class="list">'+L.slice(0,30).map(r=>'<button class="card" data-l="'+esc(r[0])+'"><div class="ci"><div class="cd">'+esc(br(v(a,r,'Data')))+' · '+esc(v(a,r,'Motivo'))+'</div><div class="cm">'+esc(v(a,r,'Respons'))+(v(a,r,'Modelo')?' · '+esc(v(a,r,'Modelo')):'')+(v(a,r,'Observação')?' · '+esc(v(a,r,'Observação')):'')+'</div></div><div class="rt">'+esc(v(a,r,'Qtd')||'1')+'<div class="cm">un</div></div></button>').join('')+'</div>':'<div class="note">Nenhuma troca registrada neste ponto.</div>'));
   $('#pane').querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>formLed(b.dataset.l));
-  if($('#pdTr')){$('#pdTr').onclick=()=>formLed(null,{ponto:id});$('#pdAg').onclick=()=>formAgendaPonto(id);}
+  if($('#pdPd'))$('#pdPd').onclick=()=>formPend({ponto:id});
+  if($('#pdTr')){$('#pdTr').onclick=()=>{const pe=pendDoPonto(id)[0];formLed(null,pe?{ponto:id,pend:String(pe[0])}:{ponto:id});};$('#pdAg').onclick=()=>formAgendaPonto(id);}
   if(adm){$('#pdEd').onclick=()=>formPonto(id);$('#pdMv').onclick=()=>{fecha();if(!S.mapa||$('#mapV').hidden)abreMapa(id);S.mapa.modo='mv:'+id;mapaDesenha();toast('Toque no novo local do ponto '+id);};
     $('#pdDl').onclick=async()=>{if(!confirmar('Excluir o ponto '+id+' do mapa? As trocas já registradas continuam no histórico.'))return;await enfileira({tipo:'excluir',aba:PT_AB,id,admin:true});toast('Ponto excluído');fecha();if(S.mapa)S.mapa.sel=null;mapaDesenha();};}
 }
