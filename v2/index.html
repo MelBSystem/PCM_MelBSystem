@@ -374,7 +374,7 @@ function aplicaLocal(op){
 async function enfileira(op){
   op.uid=uid();op.ts=Date.now();
   await put('fila',op.uid,op);
-  aplicaLocal(op);await put('kv','dados',S.d);
+  if(!(S.ap&&S.ap.has(op.uid))){if(S.ap)S.ap.add(op.uid);aplicaLocal(op);}await put('kv','dados',S.d);
   S.fila=await count('fila');status();
   if(navigator.onLine) sincroniza(false);
 }
@@ -406,7 +406,8 @@ async function baixaDados(){
   marcaLinhas(d);
   if(d.perfil&&S.user&&S.user.perfil!==d.perfil){S.user.perfil=d.perfil;ls.set('pcm2_user',S.user);}
   // reaplica o que ainda está na fila (lançamentos que deram erro ou chegaram depois)
-  S.d=d; for(const [,op] of await all('fila')) aplicaLocal(op);
+  const F=(await all('fila')).map(x=>x[1]).sort((a,b)=>a.ts-b.ts);
+  S.d=d;S.ap=new Set();for(const op of F){S.ap.add(op.uid);aplicaLocal(op);} /* troca os dados e reaplica a fila no mesmo instante, sem intervalo */
   await put('kv','dados',S.d);
   baixaImagens();
 }
