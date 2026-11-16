@@ -745,9 +745,9 @@ function stTarefa(a,r){const s=norm(v(a,r,'Status'));if(s.includes('atras'))retu
 /* ================= EQUIPAMENTOS POR SETOR/TAG (integração planta elétrica) ================= */
 const EQ_AB='Equip. planta',IT_AB='Itens elétricos';
 const FAMI={MI:'Motor (inversor)',MD:'Motor (partida direta)',MS:'Motobomba',FM:'Freio do motor',EN:'Encoder',SI:'Sensor indutivo',SE:'Sensor óptico emissor',SR:'Sensor óptico receptor',SF:'Sensor óptico difuso',SC:'Fim de curso / microswitch',SM:'Sensor magnético de segurança',SS:'Sensor de monitoramento',SP:'Sensor de pressão',SN:'Sensor de nível',BC:'Botoeira de comando',BE:'Botoeira de emergência',BP:'Botoeira de parada',BR:'Botoeira de reset',VS:'Válvula solenoide',VA:'Válvula solenoide',VR:'Válvula solenoide',EI:'Eletroímã',TV:'Trava de segurança',CS:'Corda de segurança',CL:'Coluna sonora / sinaleiro',QC:'Quadro elétrico',QR:'Quadro remoto / cabo',RE:'Antena wireless',AT:'Alimentação'};
-const GRUPOS_EQ=['Motores','Sensores e segurança','Botoeiras','Válvulas','Outros'];
+const GRUPOS_EQ=['Motores','Componentes do motor','Sensores e segurança','Botoeiras','Válvulas','Outros'];
 function famItem(tag,desc,f){if(f)return f;const p=(String(tag).match(/^[A-Z]+/)||[''])[0];return FAMI[p]||(/QUADRO/i.test(desc)?'Quadro elétrico':'Outros');}
-function grupoFam(f){if(/^Motor|Motobomba|Freio|Encoder/.test(f))return 'Motores';if(/^Botoeira/.test(f))return 'Botoeiras';if(/Válvula|Eletroímã/.test(f))return 'Válvulas';if(/^Sensor|Fim de curso|Trava|Corda/.test(f))return 'Sensores e segurança';return 'Outros';}
+function grupoFam(f){if(/^Freio|Encoder/.test(f))return 'Componentes do motor';if(/^Motor|Motobomba/.test(f))return 'Motores';if(/^Botoeira/.test(f))return 'Botoeiras';if(/Válvula|Eletroímã/.test(f))return 'Válvulas';if(/^Sensor|Fim de curso|Trava|Corda/.test(f))return 'Sensores e segurança';return 'Outros';}
 const AREA_NOME={GER:'Geral · quadros e auxiliares',ZSB:'Zona suja',ZLB:'Zona limpa'};
 const areaDe=setor=>setor?(String(setor).match(/^[A-Z]+/)||['Outros'])[0]:'A definir';
 function equipLista(){
