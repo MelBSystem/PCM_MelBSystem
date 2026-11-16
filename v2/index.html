@@ -965,7 +965,7 @@ function lManutNova(V){
     const c=e.target.closest('[data-h]');if(!c)return;const r=a.linhas[+c.dataset.h];
     abre('<div class="ph"><b>'+esc(v(a,r,'Tipo')||'Registro')+'</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a.cab.map((cc,i)=>r[i]!==''?'<b>'+esc(cc)+'</b><span>'+esc(r[i])+'</span>':'').join('')+'</div>'+blocoFotos('Histórico',r)+botoesAdm('hR'));
     ligaFotos('Histórico',r,()=>{const e=document.querySelector('#view [data-h="'+c.dataset.h+'"]');if(e)e.click();else fecha();});
-    if($('#hREd')){$('#hREd').onclick=()=>editarLinha('Histórico',r,refLinha('Histórico',r),'registro');$('#hRDl').onclick=()=>excluirLinha('Histórico',r,'este registro de manutenção');}
+    if($('#hREd')){$('#hREd').onclick=()=>formHist(null,r);$('#hRDl').onclick=()=>excluirLinha('Histórico',r,'este registro de manutenção');}
   };
 }
 function abreManual(){S.mSel=null;S.eqSel=null;S.tab='manual';S.q='';S.chip='';S.lim=40;$('#q').value='';scrollTo(0,0);render();}
@@ -1141,7 +1141,7 @@ function lHist(V){
   V.innerHTML='<div class="bar"><span>'+L.length+' registros</span></div><div class="list">'+L.slice(0,S.lim).map((r)=>'<button class="card" data-h="'+a.linhas.indexOf(r)+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Defeito','Descrição','Serviço','Tarefa'))+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+' · '+esc(v(a,r,'Equipamento'))+'</div><div class="cm">'+esc(v(a,r,'Ação'))+'</div></div><div class="rt"><span class="tag '+(norm(v(a,r,'Tipo')).includes('corret')?'w':'')+'">'+esc(v(a,r,'Tipo')||'—')+'</span></div></button>').join('')+'</div>'+mais(L.length);
   V.querySelector('.list').onclick=e=>{const c=e.target.closest('[data-h]');if(!c)return;const r=a.linhas[+c.dataset.h];abre('<div class="ph"><b>Registro</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a.cab.map((cc,i)=>r[i]!==''?'<b>'+esc(cc)+'</b><span>'+esc(r[i])+'</span>':'').join('')+'</div>'+blocoFotos('Histórico',r)+botoesAdm('hR'));
     ligaFotos('Histórico',r,()=>{const e=document.querySelector('#view [data-h="'+c.dataset.h+'"]');if(e)e.click();else fecha();});
-    if($('#hREd')){$('#hREd').onclick=()=>editarLinha('Histórico',r,refLinha('Histórico',r),'registro');$('#hRDl').onclick=()=>excluirLinha('Histórico',r,'este registro de manutenção');}};
+    if($('#hREd')){$('#hREd').onclick=()=>formHist(null,r);$('#hRDl').onclick=()=>excluirLinha('Histórico',r,'este registro de manutenção');}};
 }
 /* lista completa de equipamentos para o lançamento de manutenção (aba Equipamentos + demais abas) */
 function eqNomeTag(e){return e.nome+(e.setor?' ('+e.setor+')':'');}
@@ -1244,13 +1244,15 @@ function escolhePecas(alvo,aoFim,equipTxt){
     alvo.value=[alvo.value.trim()].concat(txt).filter(Boolean).join(', ');if(aoFim)aoFim(E.map(x=>({id:x.id,aba:x.ab,q:sel[x.k],est:num(v(x.a,x.r,'Estoque atual'))||0})));sai();};
   desenha();
 }
-function formHist(tipoPre){
+function formHist(tipoPre,rEd){
+  const ha=aba('Histórico');const ed=!!rEd;const g0=k=>ed?String(v(ha,rEd,...k)||''):'';
+  if(ed)tipoPre=g0(['Tipo']);const refEd=ed?refLinha('Histórico',rEd):null;const chAnt=ed?regChave('Histórico',rEd):'';
   const eqs=equipOpcoes().map(o=>o.v);
   const m=aba(MN);const uniqM=n=>[...new Set(m.linhas.map(x=>v(m,x,n)).filter(Boolean))].sort((x,y)=>x.localeCompare(y,'pt'));
-  abre('<div class="ph"><b>'+(tipoPre?'Nova manutenção '+tipoPre.toLowerCase():'Novo registro')+'</b><button class="lnk" data-x>Fechar</button></div>'+
-    '<div class="two"><div><label>Data</label><input id="hD" class="f" type="date" value="'+hoje()+'"></div><div><label>Tipo</label><select id="hT" class="f">'+['Corretiva','Preventiva','Preditiva','Melhoria'].map(t=>'<option'+(t===tipoPre?' selected':'')+'>'+t+'</option>').join('')+'</select></div></div>'+
+  abre('<div class="ph"><b>'+(ed?'✏️ Editar manutenção':tipoPre?'Nova manutenção '+tipoPre.toLowerCase():'Novo registro')+'</b><button class="lnk" data-x>Fechar</button></div>'+
+    '<div class="two"><div><label>Data</label><input id="hD" class="f" type="date" value="'+(ed?(isoDe(g0(['Data']))||hoje()):hoje())+'"></div><div><label>Tipo</label><select id="hT" class="f">'+['Corretiva','Preventiva','Preditiva','Melhoria'].concat(ed&&tipoPre&&['Corretiva','Preventiva','Preditiva','Melhoria'].indexOf(tipoPre)<0?[tipoPre]:[]).map(t=>'<option'+(t===tipoPre?' selected':'')+'>'+t+'</option>').join('')+'</select></div></div>'+
     '<label>Equipamento</label><div style="display:flex;gap:8px"><input id="hE" class="f" list="dlEq" placeholder="Digite ou escolha da lista" style="flex:1"><button type="button" class="btn" id="hEl" style="white-space:nowrap">📋 Lista</button></div><datalist id="dlEq">'+eqs.map(e=>'<option value="'+esc(e)+'">').join('')+'</datalist>'+
-    '<label>Área</label><select id="hA" class="f"><option>Mecânica</option><option>Elétrica</option><option>Lubrificação</option><option>Operacional</option></select>'+
+    '<label>Área</label><select id="hA" class="f">'+['Mecânica','Elétrica','Lubrificação','Operacional'].concat(ed&&g0(['Área'])&&['Mecânica','Elétrica','Lubrificação','Operacional'].indexOf(g0(['Área']))<0?[g0(['Área'])]:[]).map(o=>'<option>'+esc(o)+'</option>').join('')+'</select>'+
     '<label id="pvOptL" style="display:flex;gap:8px;align-items:center;margin-top:10px" hidden><input type="checkbox" id="pvOpt"> 🗓️ Programar a próxima manutenção</label>'+
     '<div id="pvBox" class="box" style="margin:10px 0" hidden><b>🗓️ Programar próxima manutenção</b><div class="note">O aviso aparece para a equipe '+AVISO_DIAS+' dias antes da data.</div>'+
       '<label>Tarefa do plano</label><select id="pvSel" class="f"></select>'+
@@ -1265,13 +1267,16 @@ function formHist(tipoPre){
     '<label>Peças usadas</label><div style="display:flex;gap:8px"><input id="hP" class="f" placeholder="ex.: 2× B021, 1× 4820005" style="flex:1"><button type="button" class="btn" id="hPl" style="white-space:nowrap">🔩 Peças</button></div>'+
     '<label style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="hPb"> Dar baixa no estoque das peças escolhidas</label>'+
     '<label>Tempo parado (min)</label><input id="hTp" class="f" inputmode="numeric">'+
-    '<div class="box" style="margin:10px 0"><b>📷 Fotos da manutenção</b><div class="note">Pode escolher várias. Elas aparecem no registro e no PDF do mês/semana.</div><div class="ftgrid" id="hFtG"></div><div class="btns"><label class="btn">📷 Adicionar fotos<input type="file" accept="image/*" id="hFt" hidden multiple></label></div></div>'+
-    '<div class="btns"><button class="btn p" id="hS">Salvar</button></div><div class="note">Sem internet, o registro fica guardado e é enviado depois.</div>');
+    '<div class="box" style="margin:10px 0"><b>📷 Fotos da manutenção</b><div class="note">Pode escolher várias. Elas aparecem no registro e no PDF do mês/semana.</div>'+(ed?'<div class="ftgrid" id="hFtE">'+fotosDe('Histórico',chAnt).map(x=>{const id=String(x[0]),b=imgDe(id);return '<button type="button" class="ftth" data-ft="'+esc(id)+'">'+(b?'<img src="data:image/jpeg;base64,'+b+'" alt="">':'<span>…</span>')+'</button>';}).join('')+'</div>':'')+'<div class="ftgrid" id="hFtG"></div><div class="btns"><label class="btn">📷 Adicionar fotos<input type="file" accept="image/*" id="hFt" hidden multiple></label></div></div>'+
+    '<div class="btns"><button class="btn p" id="hS">'+(ed?'Salvar alterações':'Salvar')+'</button>'+(ed&&isAdm()?'<button class="btn" id="hX" style="color:var(--cr)">🗑️ Excluir registro</button>':'')+'</div><div class="note">Sem internet, o registro fica guardado e é enviado depois.</div>');
+  if(ed){$('#hE').value=g0(['Equipamento']);$('#hA').value=g0(['Área'])||'Mecânica';$('#hDf').value=g0(['Defeito','Descrição','Serviço','Tarefa']);$('#hAc').value=g0(['Ação']);$('#hP').value=g0(['Peças']);$('#hTp').value=g0(['Tempo parado','Tempo']);
+    $('#hFtE').onclick=ev=>{const b=ev.target.closest('[data-ft]');if(b)verFoto('Histórico',b.dataset.ft,()=>{fecha();renderLista();});};
+    if($('#hX'))$('#hX').onclick=()=>excluirLinha('Histórico',rEd,'este registro de manutenção');}
   let hFotos=[];const hFtDes=()=>{$('#hFtG').innerHTML=hFotos.map((f,i)=>'<button type="button" class="ftth" data-rf="'+i+'" title="Tocar para remover"><img src="'+f.u+'" alt=""><small>✕ remover</small></button>').join('');};
   $('#hFt').onchange=ev=>{[...ev.target.files].forEach(f=>hFotos.push({f,u:URL.createObjectURL(f)}));ev.target.value='';hFtDes();};
   $('#hFtG').onclick=ev=>{const b=ev.target.closest('[data-rf]');if(!b)return;const x=hFotos.splice(+b.dataset.rf,1)[0];if(x)URL.revokeObjectURL(x.u);hFtDes();};
   let pcsEsc=[];$('#hPl').onclick=()=>escolhePecas($('#hP'),L=>{L.forEach(x=>{const k=pcsEsc.find(y=>y.id===x.id&&y.aba===x.aba);if(k)k.q+=x.q;else pcsEsc.push(x);});$('#hPb').checked=pcsEsc.some(x=>x.est>0);},$('#hE').value);
-  const ehPrev=()=>$('#hT').value==='Preventiva'||$('#pvOpt').checked;
+  const ehPrev=()=>(!ed&&$('#hT').value==='Preventiva')||$('#pvOpt').checked;
   const tarefasDo=()=>{const t=tagDoEquip($('#hE').value);return t?m.linhas.filter(r=>String(v(m,r,'Equipamento')).trim()===t):[];};
   const tarefaSel=()=>{const id=$('#pvSel').value;return id?m.linhas.find(r=>String(r[0])===id):null;};
   const msg=()=>{const n=$('#pvN').value;$('#pvMsg').innerHTML=n?'Próxima preventiva: <b>'+esc(dataBR(n))+'</b>'+(num($('#pvD').value)?' (a cada '+num($('#pvD').value)+' dias)':''):'Informe os dias ou a data da próxima.';};
@@ -1284,7 +1289,7 @@ function formHist(tipoPre){
   const montaSel=()=>{const T=tarefasDo();const ant=$('#pvSel').value;
     $('#pvSel').innerHTML='<option value="">+ Nova tarefa para este equipamento</option>'+T.map(r=>'<option value="'+esc(r[0])+'">'+esc(r[0]+' · '+v(m,r,'Tarefa','Atividade','Descrição')+(v(m,r,'Periodicidade')?' ('+v(m,r,'Periodicidade')+')':''))+'</option>').join('');
     if(T.some(r=>String(r[0])===ant))$('#pvSel').value=ant;preenche();};
-  const modo=()=>{$('#pvOptL').hidden=$('#hT').value==='Preventiva';$('#pvBox').hidden=!ehPrev();$('#hDfL').textContent=ehPrev()?'Serviço realizado':'Defeito / serviço';if(ehPrev())montaSel();};
+  const modo=()=>{$('#pvOptL').hidden=!ed&&$('#hT').value==='Preventiva';$('#pvBox').hidden=!ehPrev();$('#hDfL').textContent=ehPrev()?'Serviço realizado':'Defeito / serviço';if(ehPrev())montaSel();};
   $('#hT').onchange=modo;$('#hE').addEventListener('input',()=>{if(ehPrev())montaSel();});$('#hE').addEventListener('change',()=>{if(ehPrev())montaSel();});
   $('#pvOpt').onchange=modo;ligaChips('pvCh',$('#pvD'),(d,t)=>{daDias();if(!tarefaSel()&&!$('#pvP').value.trim())$('#pvP').value=t==='1 semana'?'Semanal':t;});
   $('#pvD').addEventListener('input',()=>{});
@@ -1309,9 +1314,14 @@ function formHist(tipoPre){
         await enfileira({tipo:'incluir',aba:MN,prefixo:'MP',campos});}
     }
     if($('#hPb').checked&&pcsEsc.length&&$('#hP').value.trim())for(const x of pcsEsc)await enfileira({tipo:'somar',aba:x.aba||'Peças',id:x.id,campos:{'Estoque atual':-x.q}});
-    await enfileira({tipo:'incluir',aba:'Histórico',prefixo:'H',campos:histCampos({data,tipo:$('#hT').value,equip,area:$('#hA').value,desc:$('#hDf').value.trim(),tarefa:idT,acao:$('#hAc').value.trim(),pecas:$('#hP').value.trim(),tempo:$('#hTp').value})});
-    const msgOk=ehPrev()&&$('#pvN').value?'Salvo · próxima em '+dataBR($('#pvN').value):'Registro salvo';
-    if(hFotos.length){const ch='H:'+[data,equip,$('#hDf').value.trim()].join('|');$('#hS').disabled=true;const n=await anexaFotos(hFotos.map(x=>x.f),'Histórico',ch,true);hFotos.forEach(x=>URL.revokeObjectURL(x.u));toast(msgOk+' · '+n+' foto(s)');}
+    if(ed){const h=ha.cab,cp={};const st=(nomes,val)=>{const i=col(h,...nomes);if(i>=0)cp[h[i]]=val;};
+      st(['Data'],data);st(['Tipo'],$('#hT').value);st(['Equipamento'],equip);st(['Área'],$('#hA').value);st(['Defeito','Descrição','Serviço'],$('#hDf').value.trim());st(['Ação'],$('#hAc').value.trim());st(['Peças'],$('#hP').value.trim());st(['Tempo parado','Tempo'],$('#hTp').value.trim());if(idT)st(['Tarefa','ID tarefa'],idT);
+      const fAnt=fotosDe('Histórico',chAnt);
+      await enfileira(Object.assign({},refEd,{tipo:'atualizar',aba:'Histórico',campos:cp,admin:true}));
+      const chN=regChave('Histórico',rEd);if(fAnt.length&&chN&&chaveN(chN)!==chaveN(chAnt))for(const x of fAnt)await enfileira({tipo:'atualizar',aba:FT_AB,id:String(x[0]),campos:{Registro:chN},admin:true});}
+    else await enfileira({tipo:'incluir',aba:'Histórico',prefixo:'H',campos:histCampos({data,tipo:$('#hT').value,equip,area:$('#hA').value,desc:$('#hDf').value.trim(),tarefa:idT,acao:$('#hAc').value.trim(),pecas:$('#hP').value.trim(),tempo:$('#hTp').value})});
+    const msgOk=ehPrev()&&$('#pvN').value?'Salvo · próxima em '+dataBR($('#pvN').value):(ed?'Alterações salvas':'Registro salvo');
+    if(hFotos.length){const ch=ed?regChave('Histórico',rEd):'H:'+[data,equip,$('#hDf').value.trim()].join('|');$('#hS').disabled=true;const n=await anexaFotos(hFotos.map(x=>x.f),'Histórico',ch,true);hFotos.forEach(x=>URL.revokeObjectURL(x.u));toast(msgOk+' · '+n+' foto(s)');}
     else toast(msgOk);
     fecha();renderLista();
   };
