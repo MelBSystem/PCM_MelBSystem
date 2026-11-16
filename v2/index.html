@@ -929,7 +929,7 @@ function lManutProx(V,seg){
 }
 function lManutLed(V,seg){
   const a=aba(LED_AB);const mSel=S.chip?manutMesCod(S.chip):'';
-  const L=a.linhas.filter(r=>!ledPend(a,r)&&(!mSel||ledMesDa(a,r)===mSel)&&busca(r.join(' '))).slice().reverse();
+  const L=recentes(a,a.linhas.filter(r=>!ledPend(a,r)&&(!mSel||ledMesDa(a,r)===mSel)&&busca(r.join(' '))));
   const tot=L.reduce((s,r)=>s+(num(v(a,r,'Qtd'))||1),0);const set={};L.forEach(r=>{const k=v(a,r,'Setor')||'—';set[k]=1;});
   V.innerHTML=seg+'<div class="btns" style="margin:6px 0 0"><button class="btn" id="rMapa">🗺️ Mapa de iluminação</button><button class="btn" id="rPdf">📄 PDF do mês</button><button class="btn" id="rPdfS">📄 PDF da semana</button><button class="btn" id="rMail">✉️ Enviar ao administrador</button><span class="note" style="align-self:center">'+esc(S.chip||('mês atual: '+mesNome(hoje().slice(0,7))))+'</span></div>'+
     '<div class="sum"><div><b>'+tot+'</b><span>refletores trocados'+(S.chip?' em '+esc(S.chip):'')+'</span></div><div><b>'+L.length+'</b><span>registros</span></div><div><b>'+Object.keys(set).length+'</b><span>setores</span></div></div>'+
@@ -939,6 +939,8 @@ function lManutLed(V,seg){
   $('#rMail').onclick=()=>emailManut(mSel||hoje().slice(0,7));
   V.onclick=e=>{const t=e.target.closest('[data-ma]');if(t){S.mAba=t.dataset.ma;S.lim=40;render();return;}const c=e.target.closest('[data-l]');if(c)formLed(c.dataset.l);};
 }
+/* mais recente no topo: data da atividade (desc); mesma data -> último lançado primeiro */
+function recentes(a,L,col){const ix=new Map(a.linhas.map((r,i)=>[r,i]));const k=r=>isoDe(v(a,r,col||'Data'))||'';return L.slice().sort((x,y)=>{const rx=Array.isArray(x)&&Array.isArray(x[0])?x[0]:x,ry=Array.isArray(y)&&Array.isArray(y[0])?y[0]:y;return k(ry).localeCompare(k(rx))||(ix.get(ry)-ix.get(rx));});}
 function lManutNova(V){
   const m=S.mAba||'corr';
   const segH='<div class="seg seg4">'+MANUT_ABAS.map(([k,t])=>'<button data-ma="'+k+'" aria-pressed="'+(m===k)+'">'+rotMAba(k,t)+'</button>').join('')+'</div>';
@@ -947,7 +949,7 @@ function lManutNova(V){
   let L=a.linhas.map((r,i)=>[r,i]);
   if(m!=='hist'){const alvo=m==='corr'?'corret':'prevent';L=L.filter(([r])=>norm(v(a,r,'Tipo')).includes(alvo));}
   const mSel=S.chip?manutMesCod(S.chip):'';if(mSel)L=L.filter(([r])=>mesDe(v(a,r,'Data'))===mSel);
-  L=L.filter(([r])=>busca(r.join(' '))).reverse();
+  L=recentes(a,L.filter(([r])=>busca(r.join(' '))));
   const mes=hoje().slice(0,7);const doMes=L.filter(([r])=>{const d=String(v(a,r,'Data'));return d.startsWith(mes)||(/^\d{2}\/\d{2}\/\d{4}/.test(d)&&d.slice(6,10)+'-'+d.slice(3,5)===mes);});
   const parado=L.reduce((s,[r])=>s+num(v(a,r,'Tempo parado','Tempo')),0);
   let h='<div class="seg seg4">'+MANUT_ABAS.map(([k,t])=>'<button data-ma="'+k+'" aria-pressed="'+(m===k)+'">'+rotMAba(k,t)+'</button>').join('')+'</div>'+avisoProx()+
@@ -1135,7 +1137,7 @@ function histCampos(o){
 /* ---- Histórico ---- */
 function lHist(V){
   const a=aba('Histórico');
-  const L=a.linhas.filter(r=>busca(r.join(' '))).slice().reverse();
+  const L=recentes(a,a.linhas.filter(r=>busca(r.join(' '))));
   V.innerHTML='<div class="bar"><span>'+L.length+' registros</span></div><div class="list">'+L.slice(0,S.lim).map((r)=>'<button class="card" data-h="'+a.linhas.indexOf(r)+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Defeito','Descrição','Serviço','Tarefa'))+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+' · '+esc(v(a,r,'Equipamento'))+'</div><div class="cm">'+esc(v(a,r,'Ação'))+'</div></div><div class="rt"><span class="tag '+(norm(v(a,r,'Tipo')).includes('corret')?'w':'')+'">'+esc(v(a,r,'Tipo')||'—')+'</span></div></button>').join('')+'</div>'+mais(L.length);
   V.querySelector('.list').onclick=e=>{const c=e.target.closest('[data-h]');if(!c)return;const r=a.linhas[+c.dataset.h];abre('<div class="ph"><b>Registro</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a.cab.map((cc,i)=>r[i]!==''?'<b>'+esc(cc)+'</b><span>'+esc(r[i])+'</span>':'').join('')+'</div>'+blocoFotos('Histórico',r)+botoesAdm('hR'));
     ligaFotos('Histórico',r,()=>{const e=document.querySelector('#view [data-h="'+c.dataset.h+'"]');if(e)e.click();else fecha();});
@@ -1609,7 +1611,7 @@ function pendDoPonto(id){const a=aba(LED_AB);return ledPendentes().filter(r=>Str
 function diasDesde(d){const i=isoDe(d);return i?Math.max(0,difDias(i,hoje())):0;}
 function cardPend(a,r){const id=String(r[0]);const fc=fotoCapa(LED_AB,id);const n=diasDesde(v(a,r,'Data'));
   return '<button class="card" data-pd="'+esc(id)+'">'+(fc?thumb(fc):'')+'<div class="ci"><div class="cd">'+esc(v(a,r,'Setor'))+(v(a,r,'Refletor')?' · '+esc(v(a,r,'Refletor')):'')+'</div><div class="cm">'+esc(v(a,r,'Motivo'))+' · avisado em '+esc(br(v(a,r,'Data')))+(v(a,r,'Respons')?' por '+esc(v(a,r,'Respons')):'')+'</div>'+(v(a,r,'Observação')?'<div class="cm">'+esc(v(a,r,'Observação'))+'</div>':'')+'</div><div class="rt"><span class="tag '+(n>=7?'c':'w')+'">'+(n===0?'hoje':n===1?'há 1 dia':'há '+n+' dias')+'</span><div class="cm">'+esc(v(a,r,'Qtd')||'1')+' un</div></div></button>';}
-function blocoPend(){const a=aba(LED_AB);const P=ledPendentes().filter(r=>busca(r.join(' '))).sort((x,y)=>isoDe(v(a,x,'Data')).localeCompare(isoDe(v(a,y,'Data'))));
+function blocoPend(){const a=aba(LED_AB);const P=recentes(a,ledPendentes().filter(r=>busca(r.join(' '))));
   return '<div class="bar"><span>⏳ Trocas pendentes · '+P.length+'</span>'+(podeLancar()?'<button class="lnk" id="pendAdd">+ Pendência</button>':'')+'</div>'+(P.length?'<div class="list">'+P.map(r=>cardPend(a,r)).join('')+'</div>':'<div class="note" style="margin:0 0 8px">Nenhuma troca pendente. Viu um refletor queimado? Toque em <b>+ Pendência</b>, tire a foto e ele fica aqui até ser trocado.</div>');}
 function ligaPend(V){const b=V.querySelector('#pendAdd');if(b)b.onclick=()=>formPend();V.querySelectorAll('[data-pd]').forEach(c=>c.onclick=()=>detPend(c.dataset.pd));}
 function formPend(pre){pre=pre||{};
@@ -1658,7 +1660,7 @@ function lLed(V){
   V.innerHTML='<button class="aviso" id="ledMapa" style="background:var(--sf);color:inherit;border-color:var(--ln)">🗺️<span><b style="color:var(--ac)">Mapa de iluminação</b> — pontos dos refletores, trocas por região e agendamentos</span></button>'+blocoPend()+'<div class="sum"><div><b>'+tot+'</b><span>refletores trocados</span></div><div><b>'+L.length+'</b><span>registros</span></div><div><b>'+Object.keys(set).length+'</b><span>setores</span></div></div>'+
     (L.length?'<div class="note">'+Object.keys(set).sort().map(k=>esc(k)+': '+set[k]).join(' · ')+'</div>':'')+
     '<div class="bar"><span>'+esc(sel)+'</span>'+(L.length?'<button class="lnk" id="ledPdf">PDF do mês</button>':'')+'</div>'+
-    (L.length?'<div class="list">'+L.slice().reverse().map(r=>'<button class="card" data-l="'+esc(r[0])+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Setor'))+(v(a,r,'Refletor')?' · '+esc(v(a,r,'Refletor')):'')+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+' · '+esc(v(a,r,'Motivo'))+(v(a,r,'Potência')?' · '+esc(v(a,r,'Potência'))+' W':'')+'</div><div class="cm">'+esc(v(a,r,'Respons'))+(v(a,r,'Modelo')?' · '+esc(v(a,r,'Modelo')):'')+'</div></div><div class="rt">'+esc(v(a,r,'Qtd')||'1')+'<div class="cm">un</div></div></button>').join('')+'</div>':'<div class="empty">Nenhuma troca registrada em '+esc(sel)+'.<br>Toque em <b>+ Troca</b>.</div>');
+    (L.length?'<div class="list">'+recentes(a,L).map(r=>'<button class="card" data-l="'+esc(r[0])+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Setor'))+(v(a,r,'Refletor')?' · '+esc(v(a,r,'Refletor')):'')+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+' · '+esc(v(a,r,'Motivo'))+(v(a,r,'Potência')?' · '+esc(v(a,r,'Potência'))+' W':'')+'</div><div class="cm">'+esc(v(a,r,'Respons'))+(v(a,r,'Modelo')?' · '+esc(v(a,r,'Modelo')):'')+'</div></div><div class="rt">'+esc(v(a,r,'Qtd')||'1')+'<div class="cm">un</div></div></button>').join('')+'</div>':'<div class="empty">Nenhuma troca registrada em '+esc(sel)+'.<br>Toque em <b>+ Troca</b>.</div>');
   V.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>formLed(b.dataset.l));$('#ledMapa').onclick=()=>abreMapa();ligaPend(V);
   const pb=$('#ledPdf');if(pb)pb.onclick=()=>pdfLed(sel,L);
 }
