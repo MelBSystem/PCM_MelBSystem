@@ -1212,22 +1212,34 @@ function formNovaPeca(pre,aoCriar){formNovo('Peças',pre?'Novo modelo de refleto
 function formNovoEquip(){formNovo(EQ_AB,'Novo equipamento',{nome:'Equipamento',obrig:['Equipamento'],manter:['Origem','Área / local'],pre:{Qtd:'1'},
   id:()=>proxIdPref(EQ_AB,'EQ'),abrir:id=>{S.eqSel=id;S.eqAba='eletrica';render();}});}
 /* ---- escolher peças cadastradas (aba Peças) para o lançamento de manutenção ---- */
-function escolhePecas(alvo,aoFim){
-  const a=aba('Peças');const sel={};
+function escolhePecas(alvo,aoFim,equipTxt){
+  /* junta as peças da aba Peças com as das serras/balancins/estimulador (aba Serras) */
+  const P=aba('Peças'),M=aba('manuais_pecas');const eqN=norm(equipTxt||'').replace(/\s+/g,' ').trim();
+  const bate=(...nomes)=>{if(!eqN)return false;return nomes.some(x=>{x=norm(x||'').replace(/\s+/g,' ').trim();return x.length>2&&(eqN.includes(x)||x.includes(eqN));});};
+  const I=P.linhas.map(r=>({ab:'Peças',a:P,r,id:String(r[0]),k:'P|'+r[0],eq:v(P,r,'Equipamento'),rot:String(r[0]),deste:bate(v(P,r,'Equipamento'))}))
+    .concat(M.linhas.filter(r=>r[0]).map(r=>{const o=v(M,r,'Aba origem');return {ab:'manuais_pecas',a:M,r,id:String(r[0]),k:'M|'+r[0],eq:nomeFiltro(o,'serras'),rot:String(v(M,r,'Código')||r[0]),deste:bate(o,nomeFiltro(o,'serras'),v(M,r,'Equipamento'))};}));
+  const nDeste=I.filter(x=>x.deste).length;let esc_=nDeste?'eq':'todas';const sel={};
   const d=document.createElement('div');d.className='sheet';d.id='pcPick';d.style.zIndex='40';
-  d.innerHTML='<div class="pane"><div class="ph"><b>Escolher peças</b><button class="lnk" id="ppX">Fechar</button></div><input id="ppQ" class="f" placeholder="Buscar por descrição, código, ID ou equipamento" autocomplete="off"><div class="note" id="ppN"></div><div id="ppL"></div><div class="btns" style="position:sticky;bottom:0;background:var(--sf);padding-top:8px"><button class="btn p" id="ppOk">Adicionar</button></div></div>';
+  d.innerHTML='<div class="pane"><div class="ph"><b>Escolher peças</b><button class="lnk" id="ppX">Fechar</button></div><input id="ppQ" class="f" placeholder="Buscar por descrição, código, ID ou equipamento" autocomplete="off"><div class="chd" id="ppF"></div><div class="note" id="ppN"></div><div id="ppL"></div><div class="btns" style="position:sticky;bottom:0;background:var(--sf);padding-top:8px"><button class="btn p" id="ppOk">Adicionar</button></div></div>';
   document.body.appendChild(d);
-  const desenha=()=>{const q=norm($('#ppQ').value);const F=a.linhas.filter(r=>!q||norm(r.join(' ')).includes(q));
-    $('#ppN').textContent=F.length+' de '+a.linhas.length+' peças'+(Object.keys(sel).length?' · '+Object.keys(sel).length+' escolhida(s)':'');
-    $('#ppL').innerHTML='<div class="list">'+F.slice(0,150).map(r=>{const id=String(r[0]),n=sel[id]||0;
-      return '<div class="card" data-pp="'+esc(id)+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Descrição'))+'</div><div class="cc">'+esc(v(a,r,'Código'))+'</div><div class="cm">'+esc(id)+' · '+esc(v(a,r,'Equipamento'))+' · estoque '+esc(v(a,r,'Estoque atual')||'0')+'</div></div><div class="stepper" style="margin:0"><button data-m="-1">−</button><input class="f" inputmode="numeric" value="'+n+'" data-q style="width:44px;text-align:center"><button data-m="1">+</button></div></div>';}).join('')+'</div>'+(F.length>150?'<div class="note">Mostrando 150 — refine a busca.</div>':'');};
+  const nSel=()=>Object.keys(sel).length;
+  const desenha=()=>{const T=norm($('#ppQ').value).split(/\s+/).filter(Boolean);
+    $('#ppF').innerHTML=(nDeste?'<button type="button" data-e="eq" aria-pressed="'+(esc_==='eq')+'">Deste equipamento ('+nDeste+')</button>':'')+'<button type="button" data-e="todas" aria-pressed="'+(esc_==='todas')+'">Todas</button><button type="button" data-e="pecas" aria-pressed="'+(esc_==='pecas')+'">Aba Peças</button><button type="button" data-e="serras" aria-pressed="'+(esc_==='serras')+'">Serras e equipamentos</button>';
+    const B=I.filter(x=>esc_==='eq'?x.deste:esc_==='pecas'?x.ab==='Peças':esc_==='serras'?x.ab!=='Peças':true);
+    const F=B.filter(x=>{if(!T.length)return true;const t=norm(x.r.join(' ')+' '+x.eq);return T.every(w=>t.includes(w));});
+    $('#ppN').textContent=F.length+' de '+B.length+' peças'+(nSel()?' · '+nSel()+' escolhida(s)':'');
+    $('#ppL').innerHTML=F.length?'<div class="list">'+F.slice(0,150).map(x=>{const n=sel[x.k]||0;
+      return '<div class="card" data-pp="'+esc(x.k)+'"><div class="ci"><div class="cd">'+esc(v(x.a,x.r,'Descrição'))+'</div><div class="cc">'+esc(v(x.a,x.r,'Código'))+'</div><div class="cm">'+esc(x.id)+' · '+esc(x.eq)+' · estoque '+esc(v(x.a,x.r,'Estoque atual')||'0')+'</div></div><div class="stepper" style="margin:0"><button data-m="-1">−</button><input class="f" inputmode="numeric" value="'+n+'" data-q style="width:44px;text-align:center"><button data-m="1">+</button></div></div>';}).join('')+'</div>'+(F.length>150?'<div class="note">Mostrando 150 — refine a busca.</div>':''):'<div class="empty">Nenhuma peça encontrada.'+(esc_!=='todas'?'<br>Toque em "Todas" para procurar em todas as listas.':'')+'</div>';};
   const sai=()=>d.remove();
   $('#ppX').onclick=sai;$('#ppQ').oninput=desenha;
-  $('#ppL').onclick=e=>{const b=e.target.closest('[data-m]');if(!b)return;const c=b.closest('[data-pp]');const id=c.dataset.pp;sel[id]=Math.max(0,(sel[id]||0)+(+b.dataset.m));if(!sel[id])delete sel[id];c.querySelector('[data-q]').value=sel[id]||0;$('#ppN').textContent=$('#ppN').textContent.replace(/ · \d+ escolhida\(s\)$/,'')+(Object.keys(sel).length?' · '+Object.keys(sel).length+' escolhida(s)':'');};
-  $('#ppL').oninput=e=>{const q=e.target.closest('[data-q]');if(!q)return;const id=q.closest('[data-pp]').dataset.pp;const n=Math.max(0,Math.round(num(q.value)||0));if(n)sel[id]=n;else delete sel[id];};
-  $('#ppOk').onclick=()=>{const ids=Object.keys(sel);if(!ids.length){toast('Escolha ao menos uma peça (use +)');return;}
-    const txt=ids.map(id=>{const r=a.linhas.find(x=>String(x[0])===id);return sel[id]+'× '+id+' '+(r?v(a,r,'Descrição'):'');});
-    alvo.value=[alvo.value.trim()].concat(txt).filter(Boolean).join(', ');if(aoFim)aoFim(ids.map(id=>({id,q:sel[id]})));sai();};
+  $('#ppF').onclick=e=>{const b=e.target.closest('[data-e]');if(!b)return;esc_=b.dataset.e;desenha();};
+  const conta=()=>{$('#ppN').textContent=$('#ppN').textContent.replace(/ · \d+ escolhida\(s\)$/,'')+(nSel()?' · '+nSel()+' escolhida(s)':'');};
+  $('#ppL').onclick=e=>{const b=e.target.closest('[data-m]');if(!b)return;const c=b.closest('[data-pp]');const k=c.dataset.pp;sel[k]=Math.max(0,(sel[k]||0)+(+b.dataset.m));if(!sel[k])delete sel[k];c.querySelector('[data-q]').value=sel[k]||0;conta();};
+  $('#ppL').oninput=e=>{const q=e.target.closest('[data-q]');if(!q)return;const k=q.closest('[data-pp]').dataset.pp;const n=Math.max(0,Math.round(num(q.value)||0));if(n)sel[k]=n;else delete sel[k];conta();};
+  $('#ppOk').onclick=()=>{const ks=Object.keys(sel);if(!ks.length){toast('Escolha ao menos uma peça (use +)');return;}
+    const E=ks.map(k=>I.find(x=>x.k===k)).filter(Boolean);
+    const txt=E.map(x=>sel[x.k]+'× '+x.rot+' '+v(x.a,x.r,'Descrição')+(x.ab!=='Peças'&&x.eq?' ('+x.eq+')':''));
+    alvo.value=[alvo.value.trim()].concat(txt).filter(Boolean).join(', ');if(aoFim)aoFim(E.map(x=>({id:x.id,aba:x.ab,q:sel[x.k],est:num(v(x.a,x.r,'Estoque atual'))||0})));sai();};
   desenha();
 }
 function formHist(tipoPre){
@@ -1256,7 +1268,7 @@ function formHist(tipoPre){
   let hFotos=[];const hFtDes=()=>{$('#hFtG').innerHTML=hFotos.map((f,i)=>'<button type="button" class="ftth" data-rf="'+i+'" title="Tocar para remover"><img src="'+f.u+'" alt=""><small>✕ remover</small></button>').join('');};
   $('#hFt').onchange=ev=>{[...ev.target.files].forEach(f=>hFotos.push({f,u:URL.createObjectURL(f)}));ev.target.value='';hFtDes();};
   $('#hFtG').onclick=ev=>{const b=ev.target.closest('[data-rf]');if(!b)return;const x=hFotos.splice(+b.dataset.rf,1)[0];if(x)URL.revokeObjectURL(x.u);hFtDes();};
-  let pcsEsc=[];$('#hPl').onclick=()=>escolhePecas($('#hP'),L=>{L.forEach(x=>{const k=pcsEsc.find(y=>y.id===x.id);if(k)k.q+=x.q;else pcsEsc.push(x);});$('#hPb').checked=true;});
+  let pcsEsc=[];$('#hPl').onclick=()=>escolhePecas($('#hP'),L=>{L.forEach(x=>{const k=pcsEsc.find(y=>y.id===x.id&&y.aba===x.aba);if(k)k.q+=x.q;else pcsEsc.push(x);});$('#hPb').checked=pcsEsc.some(x=>x.est>0);},$('#hE').value);
   const ehPrev=()=>$('#hT').value==='Preventiva'||$('#pvOpt').checked;
   const tarefasDo=()=>{const t=tagDoEquip($('#hE').value);return t?m.linhas.filter(r=>String(v(m,r,'Equipamento')).trim()===t):[];};
   const tarefaSel=()=>{const id=$('#pvSel').value;return id?m.linhas.find(r=>String(r[0])===id):null;};
@@ -1294,7 +1306,7 @@ function formHist(tipoPre){
         const g=$('#pvG').value.trim(),pe=$('#pvP').value.trim();if(g)campos[hdr(m,'Grupo')]=g;campos[hdr(m,'Periodicidade')]=pe||('A cada '+dias+' dias');if(resp)campos[hdr(m,'Responsável')]=resp;
         await enfileira({tipo:'incluir',aba:MN,prefixo:'MP',campos});}
     }
-    if($('#hPb').checked&&pcsEsc.length&&$('#hP').value.trim())for(const x of pcsEsc)await enfileira({tipo:'somar',aba:'Peças',id:x.id,campos:{'Estoque atual':-x.q}});
+    if($('#hPb').checked&&pcsEsc.length&&$('#hP').value.trim())for(const x of pcsEsc)await enfileira({tipo:'somar',aba:x.aba||'Peças',id:x.id,campos:{'Estoque atual':-x.q}});
     await enfileira({tipo:'incluir',aba:'Histórico',prefixo:'H',campos:histCampos({data,tipo:$('#hT').value,equip,area:$('#hA').value,desc:$('#hDf').value.trim(),tarefa:idT,acao:$('#hAc').value.trim(),pecas:$('#hP').value.trim(),tempo:$('#hTp').value})});
     const msgOk=ehPrev()&&$('#pvN').value?'Salvo · próxima em '+dataBR($('#pvN').value):'Registro salvo';
     if(hFotos.length){const ch='H:'+[data,equip,$('#hDf').value.trim()].join('|');$('#hS').disabled=true;const n=await anexaFotos(hFotos.map(x=>x.f),'Histórico',ch,true);hFotos.forEach(x=>URL.revokeObjectURL(x.u));toast(msgOk+' · '+n+' foto(s)');}
