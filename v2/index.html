@@ -345,6 +345,8 @@ function nomeTela(t){return cfg('aba:'+t)||TIT[t];}
 function rot(c){return cfg('campo:'+String(c).trim())||c;}
 function nomeFiltro(x,t){return cfg('filtro:'+(t||S.tab)+':'+x)||x;}
 function isAdm(){return !!(S.user&&S.user.perfil==='administrador');}
+/* quem lança (perfil lançar ou administrador) também edita o que foi postado; excluir continua só do administrador */
+function isEd(){return !!(S.user&&S.user.perfil!=='consultar');}
 function aplicaNomes(){document.querySelectorAll('.nb').forEach(b=>{const n=b.querySelector('.nl');if(n)n.textContent=cfg('aba:'+b.dataset.t)||NAVROT[b.dataset.t];});}
 function aplicaRotulos(root){if(!root)return;root.querySelectorAll('label,.kv>b,th,.rot').forEach(el=>{if(el.children.length)return;const o=el.dataset.o||(el.dataset.o=el.textContent.trim());const n=cfg('campo:'+o);el.textContent=n||o;});}
 function col(cab,...nomes){for(const n of nomes){const k=norm(n);let i=cab.findIndex(c=>norm(c)===k);if(i<0)i=cab.findIndex(c=>norm(c).startsWith(k));if(i<0)i=cab.findIndex(c=>norm(c).includes(k));if(i>=0)return i;}return -1;}
@@ -639,13 +641,13 @@ function verFoto(nAba,id,volta){
   abre('<div class="ph"><b>Foto</b><button class="lnk" id="ftV">← Voltar</button></div>'+
     (b?'<img class="big" src="data:image/jpeg;base64,'+b+'" alt="Foto do registro" id="ftBig" style="cursor:zoom-in">':'<div class="note">Imagem ainda não baixada neste aparelho.</div>')+
     '<div class="kv"><b>Legenda</b><span>'+esc(v(f,x,'Legenda')||'—')+'</span><b>Enviada</b><span>'+esc(v(f,x,'Data'))+' por '+esc(v(f,x,'Por'))+'</span></div>'+
-    (isAdm()&&podeLancar()?'<label>Editar legenda</label><input class="f" id="ftLeg" value="'+esc(v(f,x,'Legenda'))+'"><div class="btns"><button class="btn p" id="ftSv">Salvar legenda</button><label class="btn">🔄 Trocar foto<input type="file" accept="image/*" id="ftTroca" hidden></label><button class="btn" id="ftDl" style="color:var(--cr)">🗑️ Excluir foto</button></div>':'<div class="note">Só o administrador edita ou exclui fotos.</div>'));
+    (isEd()?'<label>Editar legenda</label><input class="f" id="ftLeg" value="'+esc(v(f,x,'Legenda'))+'"><div class="btns"><button class="btn p" id="ftSv">Salvar legenda</button><label class="btn">🔄 Trocar foto<input type="file" accept="image/*" id="ftTroca" hidden></label>'+(isAdm()?'<button class="btn" id="ftDl" style="color:var(--cr)">🗑️ Excluir foto</button>':'')+'</div>':'<div class="note">Seu usuário é só de consulta.</div>'));
   $('#ftV').onclick=volta;
   const big=$('#ftBig');if(big)big.onclick=()=>{$('#zi').src=big.src;$('#zoom').hidden=false;};
   if(!$('#ftSv'))return;
   $('#ftSv').onclick=async()=>{await enfileira({tipo:'atualizar',aba:FT_AB,id,campos:{Legenda:$('#ftLeg').value.trim()},admin:true});toast('Legenda salva');verFoto(nAba,id,volta);};
   $('#ftTroca').onchange=async ev=>{const fl=ev.target.files[0];if(!fl)return;try{const b64=await reduz(fl);await enfileira({tipo:'imagem',id,b64,imgKey:id,admin:true});toast('Foto trocada');verFoto(nAba,id,volta);}catch(e){toast(e.message);}};
-  $('#ftDl').onclick=async()=>{if(!confirmar('Excluir esta foto?'))return;await enfileira({tipo:'excluir',aba:FT_AB,id,admin:true});await enfileira({tipo:'excluir',aba:'imagens_app',id,admin:true});toast('Foto excluída');volta();renderLista();};
+  if($('#ftDl'))$('#ftDl').onclick=async()=>{if(!confirmar('Excluir esta foto?'))return;await enfileira({tipo:'excluir',aba:FT_AB,id,admin:true});await enfileira({tipo:'excluir',aba:'imagens_app',id,admin:true});toast('Foto excluída');volta();renderLista();};
 }
 
 /* ---------- FOTOS do cadastro (serra, equipamento, item elétrico): mesma aba "Fotos registros", chave livre ---------- */
@@ -705,7 +707,7 @@ async function excluirLinha(nAba,r,titulo,depois,extra){
   await enfileira(Object.assign({tipo:'excluir',aba:nAba,admin:true},ref));
   toast('🗑️ Excluído da planilha');fecha();if(depois)await depois();renderLista();
 }
-function botoesAdm(id){return isAdm()&&podeLancar()?'<div class="btns admbtns"><button class="btn" id="'+id+'Ed">✏️ Editar</button><button class="btn" id="'+id+'Dl" style="color:var(--cr)">🗑️ Excluir</button></div>':'';}
+function botoesAdm(id){return isEd()?'<div class="btns admbtns"><button class="btn" id="'+id+'Ed">✏️ Editar</button><button class="btn" id="'+id+'Dl" style="color:var(--cr)"'+(isAdm()?'':' hidden')+'>🗑️ Excluir</button></div>':'';}
 function editarLinha(nAba,r,opBase,titulo,depois,opts){
   opts=opts||{};
   const a=aba(nAba);
@@ -715,7 +717,7 @@ function editarLinha(nAba,r,opBase,titulo,depois,opts){
   const longo=c=>/descri|observ|obs\b|tarefa|item de verif|defeito|acao|ação/i.test(c);
   abre('<div class="ph"><b>Editar '+esc(titulo)+'</b><button class="lnk" data-x>Fechar</button></div>'+
     cols.map(([c,i])=>'<label>'+esc(c)+'</label>'+(longo(c)?'<textarea class="f" data-i="'+i+'">'+esc(r[i])+'</textarea>':'<input class="f" data-i="'+i+'" value="'+esc(r[i])+'">')).join('')+
-    '<div class="btns" style="position:sticky;bottom:0;background:var(--sf);padding:8px 0"><button class="btn p" id="edS">Salvar alterações</button>'+(opts.semExcluir?'':'<button class="btn" id="edX" style="color:var(--cr)">🗑️ Excluir</button>')+'</div><div class="note">Campos calculados pela planilha (fórmulas) não são alterados. Só o administrador edita e exclui.</div>');
+    '<div class="btns" style="position:sticky;bottom:0;background:var(--sf);padding:8px 0"><button class="btn p" id="edS">Salvar alterações</button>'+(opts.semExcluir||!isAdm()?'':'<button class="btn" id="edX" style="color:var(--cr)">🗑️ Excluir</button>')+'</div><div class="note">Campos calculados pela planilha (fórmulas) não são alterados.'+(isAdm()?'':' Para excluir, fale com o administrador.')+'</div>');
   const ex=$('#edX');if(ex)ex.onclick=()=>excluirLinha(nAba,r,titulo,opts.aoExcluir,opts.avisoExcluir);
   $('#edS').onclick=async()=>{
     const campos={};$('#pane').querySelectorAll('[data-i]').forEach(el=>{const i=+el.dataset.i;const nv=el.value.trim();if(nv!==String(r[i]==null?'':r[i]).trim())campos[a.cab[i]]=nv;});
@@ -791,9 +793,9 @@ function lEquip(V){
 function detEquip(V,id){
   const e=equipLista().find(x=>x.id===id);if(!e){S.eqSel=null;lEquip(V);return;}
   $('#ttl').textContent='← '+(e.setor||'')+' '+e.nome;$('#ttl').style.cursor='pointer';$('#ttl').onclick=()=>{S.eqSel=null;$('#ttl').onclick=null;$('#ttl').style.cursor='';render();};
-  const L=ligacoes(e);const ab=S.eqAba||'eletrica';const adm=isAdm()&&podeLancar();
+  const L=ligacoes(e);const ab=S.eqAba||'eletrica';const adm=isEd();
   const tabs=[['eletrica','Elétrica ('+e.itens.length+')'],['pecas','Peças ('+L.pecas.length+')'],['man','Manutenção ('+L.tarefas.length+')']].concat(e.manual||L.man.length?[['manual','Manual ('+L.man.length+')']]:[]).concat([['dados','Dados']]);
-  let h='<div class="btns" style="margin-top:8px"><button class="btn" id="eqV">← Voltar</button>'+(e.itens.length?'<button class="btn" id="eqEsq">📐 Esquema deste equipamento</button>':'')+(adm?'<button class="btn" id="eqEd">✏️ Editar / excluir equipamento</button>':'')+'</div>'+blocoFotosV(EQ_AB,e.id,'Foto do equipamento')+'<div class="seg">'+tabs.map(([k,t])=>'<button data-ea="'+k+'" aria-pressed="'+(ab===k)+'">'+esc(t)+'</button>').join('')+'</div>';
+  let h='<div class="btns" style="margin-top:8px"><button class="btn" id="eqV">← Voltar</button>'+(e.itens.length?'<button class="btn" id="eqEsq">📐 Esquema deste equipamento</button>':'')+(adm?'<button class="btn" id="eqEd">✏️ '+(isAdm()?'Editar / excluir':'Editar')+' equipamento</button>':'')+'</div>'+blocoFotosV(EQ_AB,e.id,'Foto do equipamento')+'<div class="seg">'+tabs.map(([k,t])=>'<button data-ea="'+k+'" aria-pressed="'+(ab===k)+'">'+esc(t)+'</button>').join('')+'</div>';
   if(ab==='eletrica'){
     const I=e.itens.filter(i=>busca(i.tag+' '+i.desc+' '+i.cod+' '+i.fam+' '+i.local));
     GRUPOS_EQ.forEach(g=>{const G=I.filter(i=>i.grp===g);if(!G.length)return;
@@ -1072,10 +1074,10 @@ function renomearEq(de){
 function detTarefa(id){
   const a=aba(MN);const r=a.linhas.find(x=>String(x[0])===String(id));if(!r)return;
   abre('<div class="ph"><b>'+esc(id)+'</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a.cab.map((c,i)=>r[i]!==''?'<b>'+esc(c)+'</b><span>'+esc(r[i])+'</span>':'').join('')+'</div>'+
-    (isAdm()&&podeLancar()?'<div class="btns" style="margin-top:0"><button class="btn" id="tEd">✏️ Editar</button><button class="btn" id="tMv">Mover</button><button class="btn" id="tCp">Copiar para…</button><button class="btn" id="tDl" style="color:var(--cr)">Excluir</button></div>':'')+
+    (isAdm()?'<div class="btns" style="margin-top:0"><button class="btn" id="tEd">✏️ Editar</button><button class="btn" id="tMv">Mover</button><button class="btn" id="tCp">Copiar para…</button><button class="btn" id="tDl" style="color:var(--cr)">Excluir</button></div>':isEd()?'<div class="btns" style="margin-top:0"><button class="btn" id="tEd">✏️ Editar</button></div>':'')+
     (podeLancar()?'<div class="box"><b>Registrar execução</b><label>Data</label><input id="xD" class="f" type="date" value="'+hoje()+'"><label>Próxima manutenção daqui a</label>'+chipsPrazo('xCh')+'<div class="two"><div><label>Dias</label><input id="xDi" class="f" inputmode="numeric" value="'+esc(num(v(a,r,'Dias'))||'')+'"></div><div><label>Próxima em</label><input id="xN" class="f" type="date"></div></div><label>Tempo parado (min)</label><input id="xT" class="f" inputmode="numeric"><label>Observação</label><textarea id="xO" class="f"></textarea><div class="btns"><button class="btn p" id="xS">Registrar</button></div></div>':''));
-  if(isAdm()&&podeLancar()){
-    $('#tEd').onclick=()=>formTarefa(id);
+  if(isEd())$('#tEd').onclick=()=>formTarefa(id);
+  if(isAdm()){
     $('#tMv').onclick=()=>destinoEq('mover',[id]);
     $('#tCp').onclick=()=>destinoEq('copiar',[id]);
     $('#tDl').onclick=async()=>{if(!confirmar('Excluir a tarefa '+id+' da planilha? O histórico de execuções não é apagado.'))return;await enfileira({tipo:'excluir',aba:MN,id});toast('Tarefa excluída');fecha();renderLista();};
@@ -1460,7 +1462,7 @@ function detCompra(i){
   const a=aba('Compras');const r=a.linhas[i];if(!r)return;const link=v(a,r,'Link');
   abre('<div class="ph"><b>Compra</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a.cab.map((c,j)=>r[j]!==''?'<b>'+esc(c)+'</b><span>'+esc(r[j])+'</span>':'').join('')+'</div>'+
     (podeLancar()?'<label>Status</label><select id="cS" class="f">'+['A pedir','Pedido','Recebido','Cancelado'].map(s=>'<option'+(s===v(a,r,'Status')?' selected':'')+'>'+s+'</option>').join('')+'</select><div class="btns"><button class="btn p" id="cSv">Salvar</button>'+(link?'<a class="btn" target="_blank" rel="noopener" href="'+esc(link)+'">Abrir loja ↗</a>':'')+'</div><div class="note">Ao marcar Recebido, a quantidade entra no estoque da peça.</div>':(link?'<a class="btn" target="_blank" rel="noopener" href="'+esc(link)+'">Abrir loja ↗</a>':'')));
-  if(isAdm()&&podeLancar()){const bx=document.createElement('button');bx.className='btn';bx.textContent='✏️ Editar item';$('#pane .btns').appendChild(bx);
+  if(isEd()){const bx=document.createElement('button');bx.className='btn';bx.textContent='✏️ Editar item';$('#pane .btns').appendChild(bx);
     bx.onclick=()=>{const conferir={};const ip=col(a.cab,'ID peça','ID');const ic=col(a.cab,'Código');if(ip>=0)conferir[a.cab[ip]]=r[ip];if(ic>=0)conferir[a.cab[ic]]=r[ic];editarLinha('Compras',r,{linha:aCompraLinha(i),idx:i,conferir},'compra');};}
   if(podeLancar())$('#cSv').onclick=async()=>{
     const novo=$('#cS').value,ant=v(a,r,'Status');
@@ -1571,7 +1573,7 @@ function ckFeitos(){
 }
 function formCkItem(id){
   if(!podeLancar()){toast('Seu usuário é só de consulta');return;}
-  if(id&&!isAdm()){toast('Só o administrador edita ou exclui itens do checklist');return;}
+  if(id&&!isEd()){toast('Seu usuário é só de consulta');return;}
   const a=aba(CK_AB);const r=id?a.linhas.find(x=>String(x[0])===String(id)):null;
   const eqs=[...new Set(a.linhas.map(x=>v(a,x,'Equipamento')).concat(aba('Manutenção').linhas.map(x=>v(aba('Manutenção'),x,'Equipamento'))).filter(Boolean))].sort();
   const cats=[...new Set(CK_CATS.concat(a.linhas.map(x=>v(a,x,'Categoria'))).filter(Boolean))];
@@ -1580,7 +1582,7 @@ function formCkItem(id){
     '<label>Categoria</label><input id="kiC" class="f" list="dlKC" value="'+esc(r?v(a,r,'Categoria'):'')+'"><datalist id="dlKC">'+cats.map(e=>'<option value="'+esc(e)+'">').join('')+'</datalist>'+
     '<label>O que verificar</label><textarea id="kiI" class="f" placeholder="ex.: Proteções e grades instaladas">'+esc(r?v(a,r,'Item'):'')+'</textarea>'+
     (r?'<label>Situação</label><select id="kiA" class="f"><option value="Sim">Ativo</option><option value="Não"'+(/^n/i.test(v(a,r,'Ativo'))?' selected':'')+'>Inativo (não aparece no checklist)</option></select>':'')+
-    '<div class="btns"><button class="btn p" id="kiS">'+(r?'Salvar':'Adicionar')+'</button>'+(r?'<button class="btn" id="kiDl" style="color:var(--cr)">🗑️ Excluir</button>':'<button class="btn" id="kiS2">Adicionar e cadastrar outro</button>')+'</div>');
+    '<div class="btns"><button class="btn p" id="kiS">'+(r?'Salvar':'Adicionar')+'</button>'+(r?(isAdm()?'<button class="btn" id="kiDl" style="color:var(--cr)">🗑️ Excluir</button>':''):'<button class="btn" id="kiS2">Adicionar e cadastrar outro</button>')+'</div>');
   const kd=$('#kiDl');if(kd)kd.onclick=()=>excluirLinha(CK_AB,r,'o item '+id+' do checklist');
   const salva=async(outro)=>{
     const c={'Equipamento':$('#kiE').value.trim(),'Categoria':$('#kiC').value.trim()||'Geral','Item de verificação':$('#kiI').value.trim()};
@@ -1679,7 +1681,7 @@ function lLed(V){
 }
 function formLed(id,pre){pre=pre||{};
   if(!podeLancar()){toast('Seu usuário é só de consulta');return;}
-  if(id&&!isAdm()){const a0=aba(LED_AB);const r0=a0.linhas.find(x=>String(x[0])===String(id));if(r0)abre('<div class="ph"><b>Troca '+esc(id)+'</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a0.cab.map((c,i)=>r0[i]!==''?'<b>'+esc(c)+'</b><span>'+esc(r0[i])+'</span>':'').join('')+'</div><div class="note">Só o administrador edita ou exclui registros.</div>'+blocoFotos(LED_AB,r0));ligaFotos(LED_AB,r0,()=>formLed(id));return;}
+  if(id&&!isEd()){const a0=aba(LED_AB);const r0=a0.linhas.find(x=>String(x[0])===String(id));if(r0)abre('<div class="ph"><b>Troca '+esc(id)+'</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a0.cab.map((c,i)=>r0[i]!==''?'<b>'+esc(c)+'</b><span>'+esc(r0[i])+'</span>':'').join('')+'</div><div class="note">Só o administrador edita ou exclui registros.</div>'+blocoFotos(LED_AB,r0));ligaFotos(LED_AB,r0,()=>formLed(id));return;}
   const a=aba(LED_AB);const r=id?a.linhas.find(x=>String(x[0])===String(id)):null;
   const setores=[...new Set(a.linhas.map(x=>v(a,x,'Setor')).filter(Boolean))].sort();
   const pd=!r&&pre.pend?a.linhas.find(x=>String(x[0])===String(pre.pend)):null;if(pd&&!pre.ponto&&v(a,pd,'Refletor'))pre.ponto=String(v(a,pd,'Refletor')).trim();
@@ -1693,7 +1695,7 @@ function formLed(id,pre){pre=pre||{};
     (r?'':'<label style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="lBx"> <span id="lBxT">Dar baixa no estoque do modelo</span></label>')+
     '<label>Motivo</label><select id="lM" class="f">'+['Queimado','Oscilando / piscando','Dano físico','Infiltração / umidade','Preventiva','Outro'].map(o=>'<option'+(g('Motivo')===o?' selected':'')+'>'+o+'</option>').join('')+'</select>'+
     '<label>Observação</label><input id="lO" class="f" value="'+esc(g('Observação'))+'">'+
-    '<div class="btns"><button class="btn p" id="lSv">Salvar</button>'+(r?'<button class="btn" id="lDl" style="color:var(--cr)">🗑️ Excluir</button>':'')+'</div><div class="note">O mês é preenchido automaticamente pela data.'+(r?'':' Depois de salvar, abra o registro para anexar fotos.')+'</div>'+(r?blocoFotos(LED_AB,r):''));
+    '<div class="btns"><button class="btn p" id="lSv">Salvar</button>'+(r&&isAdm()?'<button class="btn" id="lDl" style="color:var(--cr)">🗑️ Excluir</button>':'')+'</div><div class="note">O mês é preenchido automaticamente pela data.'+(r?'':' Depois de salvar, abra o registro para anexar fotos.')+'</div>'+(r?blocoFotos(LED_AB,r):''));
   if(r)ligaFotos(LED_AB,r,()=>formLed(id));
   {const pp=()=>{const p=pontos().find(x=>x.id.toUpperCase()===$('#lR').value.trim().toUpperCase());if(!p)return;if(!$('#lS').value.trim())$('#lS').value=p.reg;if(!$('#lP').value.trim()&&p.pot)$('#lP').value=p.pot;};$('#lR').addEventListener('change',pp);$('#lR').addEventListener('input',pp);if(pre.ponto)pp();
    const b=document.createElement('button');b.type='button';b.className='btn';b.textContent='🗺️ Escolher no mapa';b.style.marginTop='6px';b.onclick=()=>{fecha();abreMapa($('#lR').value.trim()||null);toast('Toque no refletor e depois em "Registrar troca"');};$('#lR').closest('.two').after(b);}
