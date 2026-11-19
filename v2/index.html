@@ -453,7 +453,7 @@ async function entrar(){
   $('#lgB').disabled=true;$('#lgE').textContent='Entrando…';
   try{
     const u=await api('login',{usuario:nome,senha:pin});
-    S.user={nome:u.usuario,perfil:u.perfil,token:u.token};S._exp=false;ls.set('pcm2_saiu',null);$('#lgP').value='';ls.set('pcm2_user',S.user);
+    S.user={nome:u.usuario,perfil:u.perfil,token:u.token,dia:hoje()};S._exp=false;ls.set('pcm2_ultimo',u.usuario);ls.set('pcm2_saiu',null);$('#lgP').value='';ls.set('pcm2_user',S.user);
     $('#lgE').textContent='Baixando dados da planilha…';
     await baixaDados();ls.set('pcm2_sync',Date.now());
     abreApp();
@@ -467,6 +467,9 @@ function podeLancar(){return S.user&&S.user.perfil!=='consultar';}
 
 
 /* ---------------- telas ---------------- */
+/* login vale só para o dia: no primeiro acesso de cada dia pede ID e senha de novo (a fila de lançamentos fica guardada) */
+function loginDoDia(){if(S.user&&S.user.token&&S.user.dia!==hoje()){sessaoExpirada('Novo dia: entre de novo com seu ID e senha.');return false;}return true;}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)loginDoDia();});window.addEventListener('focus',loginDoDia);setInterval(loginDoDia,60000);
 function abreApp(){$('#vLogin').hidden=true;$('#vApp').hidden=false;status();render();avisoDoDia();}
 function avisoDoDia(){try{const n=nAvisos();if(!n)return;const k='pcm2_aviso_'+hoje();if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');setTimeout(()=>toast('⚠️ '+n+' manutenç'+(n===1?'ão próxima':'ões próximas')+' — veja em Manut. › Manutenções próximas'),800);}catch(e){}}
 document.querySelector('nav.tabs').onclick=e=>{const b=e.target.closest('.nb');if(!b)return;if(b.dataset.t!==S.tab&&b.dataset.t==='check'&&!S.ck)S.ckModo='fazer';S.mSel=null;S.eqSel=null;S.tab=b.dataset.t;S.q='';S.chip='';S.lim=40;$('#q').value='';scrollTo(0,0);render();};
@@ -2163,6 +2166,8 @@ function formNomes(){
 /* ---------------- início ---------------- */
 async function inicio(){
   if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js');}catch(e){}}
+  const ult=ls.get('pcm2_ultimo');if(ult&&!$('#lgN').value)$('#lgN').value=ult;
+  if(S.user&&S.user.token&&S.user.dia!==hoje()){S.fila=await count('fila');sessaoExpirada('Novo dia: entre de novo com seu ID e senha.');if(ult)setTimeout(()=>$('#lgP').focus(),50);return;}
   if(!S.user||!S.user.token){S.user=null;$('#vLogin').hidden=false;S.fila=await count('fila');return;}
   S.d=await get('kv','dados');
   if(S.d) marcaLinhas(S.d);
