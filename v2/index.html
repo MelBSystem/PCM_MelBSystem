@@ -1075,7 +1075,7 @@ function detTarefa(id){
   const a=aba(MN);const r=a.linhas.find(x=>String(x[0])===String(id));if(!r)return;
   abre('<div class="ph"><b>'+esc(id)+'</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a.cab.map((c,i)=>r[i]!==''?'<b>'+esc(c)+'</b><span>'+esc(r[i])+'</span>':'').join('')+'</div>'+
     (isAdm()?'<div class="btns" style="margin-top:0"><button class="btn" id="tEd">✏️ Editar</button><button class="btn" id="tMv">Mover</button><button class="btn" id="tCp">Copiar para…</button><button class="btn" id="tDl" style="color:var(--cr)">Excluir</button></div>':isEd()?'<div class="btns" style="margin-top:0"><button class="btn" id="tEd">✏️ Editar</button></div>':'')+
-    (podeLancar()?'<div class="box"><b>Registrar execução</b><label>Data</label><input id="xD" class="f" type="date" value="'+hoje()+'"><label>Próxima manutenção daqui a</label>'+chipsPrazo('xCh')+'<div class="two"><div><label>Dias</label><input id="xDi" class="f" inputmode="numeric" value="'+esc(num(v(a,r,'Dias'))||'')+'"></div><div><label>Próxima em</label><input id="xN" class="f" type="date"></div></div><label>Tempo parado (min)</label><input id="xT" class="f" inputmode="numeric"><label>Observação</label><textarea id="xO" class="f"></textarea><div class="btns"><button class="btn p" id="xS">Registrar</button></div></div>':''));
+    (podeLancar()?'<div class="box"><b>Registrar execução</b><label>Data</label><input id="xD" class="f" type="date" value="'+hoje()+'"><label>Próxima manutenção daqui a</label>'+chipsPrazo('xCh')+'<div class="two"><div><label>Dias</label><input id="xDi" class="f" inputmode="numeric" value="'+esc(num(v(a,r,'Dias'))||'')+'"></div><div><label>Próxima em</label><input id="xN" class="f" type="date"></div></div><label>Tempo parado (min)</label><input id="xT" class="f" inputmode="numeric">'+campoResp('xR')+'<label>Observação</label><textarea id="xO" class="f"></textarea><div class="btns"><button class="btn p" id="xS">Registrar</button></div></div>':''));
   if(isEd())$('#tEd').onclick=()=>formTarefa(id);
   if(isAdm()){
     $('#tMv').onclick=()=>destinoEq('mover',[id]);
@@ -1091,7 +1091,7 @@ function detTarefa(id){
     const nd=num($('#xDi').value);if($('#xDi').value.trim()&&!(nd>0)){toast('Dias deve ser um número maior que zero');return;}
     const cx={[hdr(a,'Última execução','Última')]:d};if(nd>0&&String(nd)!==String(num(v(a,r,'Dias'))))cx[hdr(a,'Dias')]=nd;
     await enfileira({tipo:'atualizar',aba:MN,id,campos:cx});
-    await enfileira({tipo:'incluir',aba:'Histórico',prefixo:'H',campos:histCampos({data:d,tipo:'Preventiva',equip:v(a,r,'Equipamento'),area:v(a,r,'Área','Tipo'),desc:tarefa,tarefa:id,acao:'Executada conforme plano',tempo:$('#xT').value,obs:$('#xO').value})});
+    await enfileira({tipo:'incluir',aba:'Histórico',prefixo:'H',campos:histCampos({data:d,tipo:'Preventiva',equip:v(a,r,'Equipamento'),area:v(a,r,'Área','Tipo'),desc:tarefa,tarefa:id,acao:'Executada conforme plano',tempo:$('#xT').value,obs:$('#xO').value,resp:valResp('xR')})});
     toast('Execução registrada'+($('#xN')&&$('#xN').value?' · próxima em '+dataBR($('#xN').value):''));fecha();render();
   };
 }
@@ -1131,12 +1131,17 @@ function formTarefa(id){
   if(!r)$('#fS2').onclick=()=>salvar(true);
 }
 /* mapeia campos lógicos para os cabeçalhos reais do Histórico */
+/* ---- responsável pelo serviço: quem executou (pode ser alguém sem usuário no app) ---- */
+function nomesResp(){const L=[S.user&&S.user.nome];[['Histórico',['Responsável','Executante','Técnico']],[MN,['Responsável']],[LED_AB,['Responsável']]].forEach(([n,k])=>{const a=aba(n);if(!a||!a.cab)return;const i=col(a.cab,...k);if(i<0)return;a.linhas.forEach(r=>String(r[i]==null?'':r[i]).split(/\s*[,;\/]\s*|\s+e\s+/).forEach(x=>L.push(x)));});
+  const vis={};return L.map(x=>String(x||'').trim()).filter(x=>x&&x.length<40&&!/^\d/.test(x)&&!vis[norm(x)]&&(vis[norm(x)]=1)).sort((x,y)=>x.localeCompare(y,'pt'));}
+function campoResp(id,val){return '<label>Responsável pelo serviço</label><input id="'+id+'" class="f" list="dl_'+id+'" value="'+esc(val==null?(S.user?S.user.nome:''):val)+'" placeholder="Quem executou (ex.: Luiz, João)" autocomplete="off"><datalist id="dl_'+id+'">'+nomesResp().map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist><div class="note" style="margin-top:2px">Pode ser alguém sem usuário no app. Mais de um: separe por vírgula.</div>';}
+function valResp(id){const e=$('#'+id);return (e&&e.value.trim())||(S.user?S.user.nome:'');}
 function histCampos(o){
   const h=aba('Histórico').cab,out={};
   const set=(nomes,val)=>{if(val===''||val==null)return;const i=col(h,...nomes);if(i>=0)out[h[i]]=val;};
   set(['Data'],o.data);set(['Tipo'],o.tipo);set(['Equipamento'],o.equip);set(['Área'],o.area);
   set(['Tarefa','ID tarefa'],o.tarefa);set(['Defeito','Descrição','Serviço'],o.desc);set(['Ação'],o.acao);
-  set(['Peças'],o.pecas);set(['Tempo parado','Tempo'],o.tempo);set(['Responsável','Executante','Técnico'],S.user.nome);set(['Obs'],o.obs);
+  set(['Peças'],o.pecas);set(['Tempo parado','Tempo'],o.tempo);set(['Responsável','Executante','Técnico'],o.resp||S.user.nome);set(['Obs'],o.obs);
   return out;
 }
 /* ---- Histórico ---- */
@@ -1258,6 +1263,7 @@ function formHist(tipoPre,rEd){
     '<div class="two"><div><label>Data</label><input id="hD" class="f" type="date" value="'+(ed?(isoDe(g0(['Data']))||hoje()):hoje())+'"></div><div><label>Tipo</label><select id="hT" class="f">'+['Corretiva','Preventiva','Preditiva','Melhoria'].concat(ed&&tipoPre&&['Corretiva','Preventiva','Preditiva','Melhoria'].indexOf(tipoPre)<0?[tipoPre]:[]).map(t=>'<option'+(t===tipoPre?' selected':'')+'>'+t+'</option>').join('')+'</select></div></div>'+
     '<label>Equipamento</label><div style="display:flex;gap:8px"><input id="hE" class="f" list="dlEq" placeholder="Digite ou escolha da lista" style="flex:1"><button type="button" class="btn" id="hEl" style="white-space:nowrap">📋 Lista</button></div><datalist id="dlEq">'+eqs.map(e=>'<option value="'+esc(e)+'">').join('')+'</datalist>'+
     '<label>Área</label><select id="hA" class="f">'+['Mecânica','Elétrica','Lubrificação','Operacional'].concat(ed&&g0(['Área'])&&['Mecânica','Elétrica','Lubrificação','Operacional'].indexOf(g0(['Área']))<0?[g0(['Área'])]:[]).map(o=>'<option>'+esc(o)+'</option>').join('')+'</select>'+
+    campoResp('hR',ed?g0(['Responsável','Executante','Técnico']):null)+
     '<label id="pvOptL" style="display:flex;gap:8px;align-items:center;margin-top:10px" hidden><input type="checkbox" id="pvOpt"> 🗓️ Programar a próxima manutenção</label>'+
     '<div id="pvBox" class="box" style="margin:10px 0" hidden><b>🗓️ Programar próxima manutenção</b><div class="note">O aviso aparece para a equipe '+AVISO_DIAS+' dias antes da data.</div>'+
       '<label>Tarefa do plano</label><select id="pvSel" class="f"></select>'+
@@ -1320,11 +1326,11 @@ function formHist(tipoPre,rEd){
     }
     if($('#hPb').checked&&pcsEsc.length&&$('#hP').value.trim())for(const x of pcsEsc)await enfileira({tipo:'somar',aba:x.aba||'Peças',id:x.id,campos:{'Estoque atual':-x.q}});
     if(ed){const h=ha.cab,cp={};const st=(nomes,val)=>{const i=col(h,...nomes);if(i>=0)cp[h[i]]=val;};
-      st(['Data'],data);st(['Tipo'],$('#hT').value);st(['Equipamento'],equip);st(['Área'],$('#hA').value);st(['Defeito','Descrição','Serviço'],$('#hDf').value.trim());st(['Ação'],$('#hAc').value.trim());st(['Peças'],$('#hP').value.trim());st(['Tempo parado','Tempo'],$('#hTp').value.trim());if(idT)st(['Tarefa','ID tarefa'],idT);
+      st(['Data'],data);st(['Tipo'],$('#hT').value);st(['Equipamento'],equip);st(['Área'],$('#hA').value);st(['Defeito','Descrição','Serviço'],$('#hDf').value.trim());st(['Ação'],$('#hAc').value.trim());st(['Peças'],$('#hP').value.trim());st(['Tempo parado','Tempo'],$('#hTp').value.trim());st(['Responsável','Executante','Técnico'],valResp('hR'));if(idT)st(['Tarefa','ID tarefa'],idT);
       const fAnt=fotosDe('Histórico',chAnt);
       await enfileira(Object.assign({},refEd,{tipo:'atualizar',aba:'Histórico',campos:cp,admin:true}));
       const chN=regChave('Histórico',rEd);if(fAnt.length&&chN&&chaveN(chN)!==chaveN(chAnt))for(const x of fAnt)await enfileira({tipo:'atualizar',aba:FT_AB,id:String(x[0]),campos:{Registro:chN},admin:true});}
-    else await enfileira({tipo:'incluir',aba:'Histórico',prefixo:'H',campos:histCampos({data,tipo:$('#hT').value,equip,area:$('#hA').value,desc:$('#hDf').value.trim(),tarefa:idT,acao:$('#hAc').value.trim(),pecas:$('#hP').value.trim(),tempo:$('#hTp').value})});
+    else await enfileira({tipo:'incluir',aba:'Histórico',prefixo:'H',campos:histCampos({data,tipo:$('#hT').value,equip,area:$('#hA').value,desc:$('#hDf').value.trim(),tarefa:idT,acao:$('#hAc').value.trim(),pecas:$('#hP').value.trim(),tempo:$('#hTp').value,resp:valResp('hR')})});
     const msgOk=ehPrev()&&$('#pvN').value?'Salvo · próxima em '+dataBR($('#pvN').value):(ed?'Alterações salvas':'Registro salvo');
     if(hFotos.length){const ch=ed?regChave('Histórico',rEd):'H:'+[data,equip,$('#hDf').value.trim()].join('|');$('#hS').disabled=true;const n=await anexaFotos(hFotos.map(x=>x.f),'Histórico',ch,true);hFotos.forEach(x=>URL.revokeObjectURL(x.u));toast(msgOk+' · '+n+' foto(s)');}
     else toast(msgOk);
@@ -1694,7 +1700,7 @@ function formLed(id,pre){pre=pre||{};
     campoModelo('lMd',g('Modelo'),'Modelo novo instalado')+
     (r?'':'<label style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="lBx"> <span id="lBxT">Dar baixa no estoque do modelo</span></label>')+
     '<label>Motivo</label><select id="lM" class="f">'+['Queimado','Oscilando / piscando','Dano físico','Infiltração / umidade','Preventiva','Outro'].map(o=>'<option'+(g('Motivo')===o?' selected':'')+'>'+o+'</option>').join('')+'</select>'+
-    '<label>Observação</label><input id="lO" class="f" value="'+esc(g('Observação'))+'">'+
+    '<label>Observação</label><input id="lO" class="f" value="'+esc(g('Observação'))+'">'+campoResp('lRs',r?g('Responsável'):null)+
     '<div class="btns"><button class="btn p" id="lSv">Salvar</button>'+(r&&isAdm()?'<button class="btn" id="lDl" style="color:var(--cr)">🗑️ Excluir</button>':'')+'</div><div class="note">O mês é preenchido automaticamente pela data.'+(r?'':' Depois de salvar, abra o registro para anexar fotos.')+'</div>'+(r?blocoFotos(LED_AB,r):''));
   if(r)ligaFotos(LED_AB,r,()=>formLed(id));
   {const pp=()=>{const p=pontos().find(x=>x.id.toUpperCase()===$('#lR').value.trim().toUpperCase());if(!p)return;if(!$('#lS').value.trim())$('#lS').value=p.reg;if(!$('#lP').value.trim()&&p.pot)$('#lP').value=p.pot;};$('#lR').addEventListener('change',pp);$('#lR').addEventListener('input',pp);if(pre.ponto)pp();
@@ -1705,12 +1711,12 @@ function formLed(id,pre){pre=pre||{};
   const ld=$('#lDl');if(ld)ld.onclick=()=>excluirLinha(LED_AB,r,'a troca '+id);
   $('#lSv').onclick=async()=>{
     const d=$('#lD').value||hoje();
-    const c={'Data da troca':d,'Mês':d.slice(0,7),'Setor / local':$('#lS').value.trim(),'Refletor (identificação)':$('#lR').value.trim(),'Potência (W)':$('#lP').value.trim(),'Qtd':num($('#lQ').value)||1,'Motivo':$('#lM').value,'Observação':$('#lO').value.trim(),'Modelo instalado':$('#lMd').value.trim()};
+    const c={'Data da troca':d,'Mês':d.slice(0,7),'Setor / local':$('#lS').value.trim(),'Refletor (identificação)':$('#lR').value.trim(),'Potência (W)':$('#lP').value.trim(),'Qtd':num($('#lQ').value)||1,'Motivo':$('#lM').value,'Observação':$('#lO').value.trim(),'Modelo instalado':$('#lMd').value.trim(),'Responsável':valResp('lRs')};
     if(!c['Setor / local']){toast('Informe o setor / local');return;}
     if(r) await enfileira({tipo:'atualizar',aba:LED_AB,id,campos:c});
     else { const baixa=$('#lBx')&&$('#lBx').checked;
-      if(pd){const av='Avisado por '+(v(a,pd,'Respons')||'—')+' em '+br(v(a,pd,'Data'));c['Observação']=[c['Observação'],c['Observação'].indexOf('Avisado por')<0?av:''].filter(Boolean).join(' · ');c['Responsável']=S.user.nome;c['Status']='Concluída';await enfileira({tipo:'atualizar',aba:LED_AB,id:String(pre.pend),campos:c});}
-      else{c.ID='LED'+String(Date.now()).slice(-6); c['Responsável']=S.user.nome; await enfileira({tipo:'incluir',aba:LED_AB,campos:c});}
+      if(pd){const av='Avisado por '+(v(a,pd,'Respons')||'—')+' em '+br(v(a,pd,'Data'));c['Observação']=[c['Observação'],c['Observação'].indexOf('Avisado por')<0?av:''].filter(Boolean).join(' · ');c['Status']='Concluída';await enfileira({tipo:'atualizar',aba:LED_AB,id:String(pre.pend),campos:c});}
+      else{c.ID='LED'+String(Date.now()).slice(-6); await enfileira({tipo:'incluir',aba:LED_AB,campos:c});}
       const pc=pecaDoModelo(c['Modelo instalado']);if(pc&&baixa)await enfileira({tipo:'somar',aba:'Peças',id:String(pc[0]),campos:{'Estoque atual':-c.Qtd}});
       const pt=c['Modelo instalado']?pontos().find(x=>x.id.toUpperCase()===c['Refletor (identificação)'].toUpperCase()):null;
       if(pt&&(pt.modelo!==c['Modelo instalado']||(c['Potência (W)']&&String(pt.pot)!==c['Potência (W)']))){const cp={'Modelo':c['Modelo instalado']};if(c['Potência (W)'])cp['Potência (W)']=c['Potência (W)'];await enfileira({tipo:'atualizar',aba:PT_AB,id:pt.id,campos:cp});} }
