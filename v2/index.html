@@ -874,10 +874,15 @@ function relManut(mes,rg){
   const top=Object.entries(eqs).sort((x,y)=>y[1]-x[1]).slice(0,5);
   let h='<h1>Relatório de manutenção · '+esc(perNome)+'</h1><div class="meta">PCM · '+L.length+' registros · '+tipos.map(t=>esc(t)+': '+L.filter(r=>(v(a,r,'Tipo')||'Outros')===t).length+' · ').join('')+Math.round(parado)+' min de máquina parada · '+aba(LED_AB).linhas.filter(r=>ledIn(aba(LED_AB),r)).length+' trocas de LED · emitido em '+esc(new Date().toLocaleString('pt-BR'))+' por '+esc(S.user.nome)+'</div>';
   if(top.length)h+='<div class="meta"><b>Equipamentos com mais registros:</b> '+top.map(([e,n])=>esc(e)+' ('+n+')').join(' · ')+'</div>';
+  const DF=L.map(r=>[r,dfInfo(a,r)]).filter(x=>x[1]);
+  if(DF.length){const soma=k=>DF.filter(([r,x])=>x.sit===k).reduce((s,[r,x])=>s+x.dias,0);
+    h+='<h2>⏳ Equipamentos com defeito por período · '+DF.length+'</h2><div class="meta">'+[[DF_SIT[0],'dia(s) operando com defeito'],[DF_SIT[1],'dia(s) parado aguardando solução'],[DF_SIT[2],'dia(s) parte parado, parte com defeito']].map(([k,t])=>soma(k)?'<b>'+soma(k)+'</b> '+t:'').filter(Boolean).join(' · ')+'</div>'+
+      '<table><thead><tr><th style="width:22%">Equipamento</th><th>Defeito</th><th style="width:10%">Desde</th><th style="width:10%">Normalizado</th><th style="width:7%">Dias</th><th style="width:16%">Situação</th><th style="width:9%">Parado (min)</th></tr></thead><tbody>'+
+      DF.map(([r,x])=>'<tr><td><b>'+esc(v(a,r,'Equipamento'))+'</b></td><td>'+esc(v(a,r,'Defeito','Descrição','Serviço'))+'</td><td>'+esc(dataBR(x.de))+'</td><td>'+esc(dataBR(x.ate))+'</td><td><b>'+x.dias+'</b></td><td>'+esc(x.sit)+'</td><td>'+esc(v(a,r,'Tempo parado','Tempo'))+'</td></tr>').join('')+'</tbody></table>';}
   if(!L.length)h+='<h2>Manutenção</h2><p>Nenhum registro de manutenção neste período.</p>';
   tipos.forEach(t=>{const T=L.filter(r=>(v(a,r,'Tipo')||'Outros')===t);
-    h+='<h2>Manutenção '+esc(t.toLowerCase())+' · '+T.length+'</h2><table><thead><tr><th style="width:9%">Data</th><th style="width:20%">Equipamento</th><th>Defeito / serviço</th><th>Ação realizada</th><th style="width:14%">Peças usadas</th><th style="width:7%">Parado (min)</th><th style="width:10%">Responsável</th></tr></thead><tbody>'+
-      T.map(r=>'<tr><td>'+esc(br(v(a,r,'Data')))+'</td><td><b>'+esc(v(a,r,'Equipamento'))+'</b>'+(v(a,r,'Área')?'<br><small>'+esc(v(a,r,'Área'))+'</small>':'')+'</td><td>'+esc(v(a,r,'Defeito','Descrição','Serviço'))+nFotosTxt('Histórico',r)+'</td><td>'+esc(v(a,r,'Ação'))+'</td><td>'+esc(v(a,r,'Peças'))+'</td><td>'+esc(v(a,r,'Tempo parado','Tempo'))+'</td><td>'+esc(v(a,r,'Respons','Executante','Técnico'))+'</td></tr>').join('')+'</tbody></table>';
+    h+='<h2>Manutenção '+esc(t.toLowerCase())+' · '+T.length+'</h2><table><thead><tr><th style="width:9%">Data</th><th style="width:20%">Equipamento</th><th>Defeito / serviço</th><th>Ação realizada</th><th style="width:20%">Peças usadas</th><th style="width:7%">Parado (min)</th><th style="width:10%">Responsável</th></tr></thead><tbody>'+
+      T.map(r=>'<tr><td>'+esc(br(v(a,r,'Data')))+'</td><td><b>'+esc(v(a,r,'Equipamento'))+'</b>'+(v(a,r,'Área')?'<br><small>'+esc(v(a,r,'Área'))+'</small>':'')+'</td><td>'+esc(v(a,r,'Defeito','Descrição','Serviço'))+nFotosTxt('Histórico',r)+((x=>x?'<br><small><b>'+esc(dfTxt(x))+'</b></small>':'')(dfInfo(a,r)))+'</td><td>'+esc(v(a,r,'Ação'))+'</td><td>'+pecasHtml(v(a,r,'Peças'))+'</td><td>'+esc(v(a,r,'Tempo parado','Tempo'))+(num(v(a,r,'Tempo parado','Tempo'))>=60?'<br><small>('+esc(minTxt(v(a,r,'Tempo parado','Tempo')))+')</small>':'')+'</td><td>'+esc(v(a,r,'Respons','Executante','Técnico'))+'</td></tr>').join('')+'</tbody></table>';
     const FT=T.map(r=>fotosRel('Histórico',a,r,'<b>'+esc(br(v(a,r,'Data')))+' · '+esc(v(a,r,'Equipamento'))+'</b> — '+esc(v(a,r,'Defeito','Descrição','Serviço')))).join('');if(FT)h+='<div style="font-weight:bold;font-size:12px;margin-top:8px">Fotos · manutenção '+esc(t.toLowerCase())+'</div>'+FT;});
   const la=aba(LED_AB);const LL=la.linhas.filter(r=>ledIn(la,r)).sort((x,y)=>String(v(la,x,'Data')).localeCompare(String(v(la,y,'Data'))));
   const ltot=LL.reduce((s,r)=>s+(num(v(la,r,'Qtd'))||1),0);
@@ -960,7 +965,7 @@ function lManutNova(V){
   let h='<div class="seg seg4">'+MANUT_ABAS.map(([k,t])=>'<button data-ma="'+k+'" aria-pressed="'+(m===k)+'">'+rotMAba(k,t)+'</button>').join('')+'</div>'+avisoProx()+
     '<div class="btns" style="margin:6px 0 0"><button class="btn" id="rPdf">📄 PDF do mês</button><button class="btn" id="rPdfS">📄 PDF da semana</button><button class="btn" id="rMail">✉️ Enviar ao administrador</button><span class="note" style="align-self:center">'+esc(S.chip||('mês atual: '+mesNome(hoje().slice(0,7))))+'</span></div>'+
     '<div class="sum"><div><b>'+L.length+'</b><span>registros'+(S.chip?' em '+esc(S.chip):'')+'</span></div><div><b>'+doMes.length+'</b><span>neste mês</span></div><div><b>'+Math.round(parado)+'</b><span>min parado</span></div></div>';
-  h+=L.length?'<div class="list">'+L.slice(0,S.lim).map(([r,i])=>'<button class="card" data-h="'+i+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Equipamento')||'(sem equipamento)')+'</div><div style="font-size:14px;margin-top:2px">'+esc(v(a,r,'Defeito','Descrição','Serviço','Tarefa'))+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+(v(a,r,'Área')?' · '+esc(v(a,r,'Área')):'')+(v(a,r,'Ação')?' · '+esc(v(a,r,'Ação')):'')+'</div></div><div class="rt"><span class="tag '+(norm(v(a,r,'Tipo')).includes('corret')?'w':'')+'">'+esc(v(a,r,'Tipo')||'—')+'</span>'+(num(v(a,r,'Tempo parado','Tempo'))?'<div class="cm">'+esc(v(a,r,'Tempo parado','Tempo'))+' min</div>':'')+nFotos('Histórico',r)+'</div></button>').join('')+'</div>'+mais(L.length)
+  h+=L.length?'<div class="list">'+L.slice(0,S.lim).map(([r,i])=>'<button class="card" data-h="'+i+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Equipamento')||'(sem equipamento)')+'</div>'+((x=>x?'<div class="cm" style="color:var(--cr)">⏳ '+x.dias+' dia(s) com defeito · '+esc(x.sit.toLowerCase())+'</div>':'')(dfInfo(a,r)))+'<div style="font-size:14px;margin-top:2px">'+esc(v(a,r,'Defeito','Descrição','Serviço','Tarefa'))+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+(v(a,r,'Área')?' · '+esc(v(a,r,'Área')):'')+(v(a,r,'Ação')?' · '+esc(v(a,r,'Ação')):'')+'</div></div><div class="rt"><span class="tag '+(norm(v(a,r,'Tipo')).includes('corret')?'w':'')+'">'+esc(v(a,r,'Tipo')||'—')+'</span>'+(num(v(a,r,'Tempo parado','Tempo'))?'<div class="cm">'+esc(v(a,r,'Tempo parado','Tempo'))+' min</div>':'')+nFotos('Histórico',r)+'</div></button>').join('')+'</div>'+mais(L.length)
     :'<div class="empty">'+(m==='hist'?'Nenhum registro de manutenção ainda.':'Nenhuma manutenção '+(m==='corr'?'corretiva':'preventiva')+' registrada.')+(podeLancar()&&m!=='hist'?'<br>Toque em <b>'+(m==='corr'?'+ Corretiva':'+ Preventiva')+'</b> para registrar.':'')+'</div>';
   V.innerHTML=h;
   $('#rPdf').onclick=()=>pdfManut(S.chip?manutMesCod(S.chip):hoje().slice(0,7));$('#rPdfS').onclick=()=>pdfManut('',semanaRg());
@@ -968,7 +973,7 @@ function lManutNova(V){
   V.onclick=e=>{
     const t=e.target.closest('[data-ma]');if(t){S.mAba=t.dataset.ma;S.lim=40;render();return;}
     const c=e.target.closest('[data-h]');if(!c)return;const r=a.linhas[+c.dataset.h];
-    abre('<div class="ph"><b>'+esc(v(a,r,'Tipo')||'Registro')+'</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a.cab.map((cc,i)=>r[i]!==''?'<b>'+esc(cc)+'</b><span>'+esc(r[i])+'</span>':'').join('')+'</div>'+blocoFotos('Histórico',r)+botoesAdm('hR'));
+    abre('<div class="ph"><b>'+esc(v(a,r,'Tipo')||'Registro')+'</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a.cab.map((cc,i)=>r[i]!==''?'<b>'+esc(cc)+'</b><span>'+(/^pecas/.test(norm(cc))?pecasHtml(r[i]):esc(r[i]))+'</span>':'').join('')+'</div>'+blocoFotos('Histórico',r)+botoesAdm('hR'));
     ligaFotos('Histórico',r,()=>{const e=document.querySelector('#view [data-h="'+c.dataset.h+'"]');if(e)e.click();else fecha();});
     if($('#hREd')){$('#hREd').onclick=()=>formHist(null,r);$('#hRDl').onclick=()=>excluirLinha('Histórico',r,'este registro de manutenção');}
   };
@@ -1131,6 +1136,11 @@ function formTarefa(id){
   if(!r)$('#fS2').onclick=()=>salvar(true);
 }
 /* mapeia campos lógicos para os cabeçalhos reais do Histórico */
+/* ---- período com defeito: equipamento que ficou dias com defeito (operando assim ou parado) até a solução ---- */
+const DF_SIT=['Operou com defeito','Ficou parado','Parte parado, parte com defeito'];
+function dfInfo(a,r){const de=isoDe(v(a,r,'Defeito desde'));if(!de)return null;const ate=isoDe(v(a,r,'Normalizado em'))||isoDe(v(a,r,'Data'))||hoje();return {de,ate,dias:Math.max(0,difDias(de,ate)),sit:String(v(a,r,'Situação no período')||DF_SIT[0])};}
+function dfTxt(x){return '⏳ Com defeito de '+dataBR(x.de)+' a '+dataBR(x.ate)+' ('+x.dias+' dia'+(x.dias===1?'':'s')+') · '+x.sit.toLowerCase();}
+function minTxt(m){m=Math.round(num(m));if(!(m>0))return '';const d=Math.floor(m/1440),h=Math.floor(m%1440/60),mi=m%60;return [d?d+' d':'',h?h+' h':'',mi?mi+' min':''].filter(Boolean).join(' ');}
 /* ---- responsável pelo serviço: quem executou (pode ser alguém sem usuário no app) ---- */
 function nomesResp(){const L=[S.user&&S.user.nome];[['Histórico',['Responsável','Executante','Técnico']],[MN,['Responsável']],[LED_AB,['Responsável']]].forEach(([n,k])=>{const a=aba(n);if(!a||!a.cab)return;const i=col(a.cab,...k);if(i<0)return;a.linhas.forEach(r=>String(r[i]==null?'':r[i]).split(/\s*[,;\/]\s*|\s+e\s+/).forEach(x=>L.push(x)));});
   const vis={};return L.map(x=>String(x||'').trim()).filter(x=>x&&x.length<40&&!/^\d/.test(x)&&!vis[norm(x)]&&(vis[norm(x)]=1)).sort((x,y)=>x.localeCompare(y,'pt'));}
@@ -1141,7 +1151,7 @@ function histCampos(o){
   const set=(nomes,val)=>{if(val===''||val==null)return;const i=col(h,...nomes);if(i>=0)out[h[i]]=val;};
   set(['Data'],o.data);set(['Tipo'],o.tipo);set(['Equipamento'],o.equip);set(['Área'],o.area);
   set(['Tarefa','ID tarefa'],o.tarefa);set(['Defeito','Descrição','Serviço'],o.desc);set(['Ação'],o.acao);
-  set(['Peças'],o.pecas);set(['Tempo parado','Tempo'],o.tempo);set(['Responsável','Executante','Técnico'],o.resp||S.user.nome);set(['Obs'],o.obs);
+  set(['Peças'],o.pecas);set(['Tempo parado','Tempo'],o.tempo);if(o.df){set(['Defeito desde'],o.df.de);set(['Normalizado em'],o.df.ate);set(['Situação no período'],o.df.sit);set(['Dias com defeito'],o.df.dias);}set(['Responsável','Executante','Técnico'],o.resp||S.user.nome);set(['Obs'],o.obs);
   return out;
 }
 /* ---- Histórico ---- */
@@ -1149,7 +1159,7 @@ function lHist(V){
   const a=aba('Histórico');
   const L=recentes(a,a.linhas.filter(r=>busca(r.join(' '))));
   V.innerHTML='<div class="bar"><span>'+L.length+' registros</span></div><div class="list">'+L.slice(0,S.lim).map((r)=>'<button class="card" data-h="'+a.linhas.indexOf(r)+'"><div class="ci"><div class="cd">'+esc(v(a,r,'Defeito','Descrição','Serviço','Tarefa'))+'</div><div class="cm">'+esc(br(v(a,r,'Data')))+' · '+esc(v(a,r,'Equipamento'))+'</div><div class="cm">'+esc(v(a,r,'Ação'))+'</div></div><div class="rt"><span class="tag '+(norm(v(a,r,'Tipo')).includes('corret')?'w':'')+'">'+esc(v(a,r,'Tipo')||'—')+'</span></div></button>').join('')+'</div>'+mais(L.length);
-  V.querySelector('.list').onclick=e=>{const c=e.target.closest('[data-h]');if(!c)return;const r=a.linhas[+c.dataset.h];abre('<div class="ph"><b>Registro</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a.cab.map((cc,i)=>r[i]!==''?'<b>'+esc(cc)+'</b><span>'+esc(r[i])+'</span>':'').join('')+'</div>'+blocoFotos('Histórico',r)+botoesAdm('hR'));
+  V.querySelector('.list').onclick=e=>{const c=e.target.closest('[data-h]');if(!c)return;const r=a.linhas[+c.dataset.h];abre('<div class="ph"><b>Registro</b><button class="lnk" data-x>Fechar</button></div><div class="kv">'+a.cab.map((cc,i)=>r[i]!==''?'<b>'+esc(cc)+'</b><span>'+(/^pecas/.test(norm(cc))?pecasHtml(r[i]):esc(r[i]))+'</span>':'').join('')+'</div>'+blocoFotos('Histórico',r)+botoesAdm('hR'));
     ligaFotos('Histórico',r,()=>{const e=document.querySelector('#view [data-h="'+c.dataset.h+'"]');if(e)e.click();else fecha();});
     if($('#hREd')){$('#hREd').onclick=()=>formHist(null,r);$('#hRDl').onclick=()=>excluirLinha('Histórico',r,'este registro de manutenção');}};
 }
@@ -1224,7 +1234,7 @@ function formNovaPeca(pre,aoCriar){formNovo('Peças',pre?'Novo modelo de refleto
 function formNovoEquip(){formNovo(EQ_AB,'Novo equipamento',{nome:'Equipamento',obrig:['Equipamento'],manter:['Origem','Área / local'],pre:{Qtd:'1'},
   id:()=>proxIdPref(EQ_AB,'EQ'),abrir:id=>{S.eqSel=id;S.eqAba='eletrica';render();}});}
 /* ---- escolher peças cadastradas (aba Peças) para o lançamento de manutenção ---- */
-function escolhePecas(alvo,aoFim,equipTxt){
+function escolhePecas(alvo,aoFim,equipTxt,opt){opt=opt||{};const KT=opt.semKits?[]:kitsLista();
   /* junta as peças da aba Peças com as das serras/balancins/estimulador (aba Serras) */
   const P=aba('Peças'),M=aba('manuais_pecas');const eqN=norm(equipTxt||'').replace(/\s+/g,' ').trim();
   const bate=(...nomes)=>{if(!eqN)return false;return nomes.some(x=>{x=norm(x||'').replace(/\s+/g,' ').trim();return x.length>2&&(eqN.includes(x)||x.includes(eqN));});};
@@ -1232,11 +1242,14 @@ function escolhePecas(alvo,aoFim,equipTxt){
     .concat(M.linhas.filter(r=>r[0]).map(r=>{const o=v(M,r,'Aba origem');return {ab:'manuais_pecas',a:M,r,id:String(r[0]),k:'M|'+r[0],eq:nomeFiltro(o,'serras'),rot:String(v(M,r,'Código')||r[0]),deste:bate(o,nomeFiltro(o,'serras'),v(M,r,'Equipamento'))};}));
   const nDeste=I.filter(x=>x.deste).length;let esc_=nDeste?'eq':'todas';const sel={};
   const d=document.createElement('div');d.className='sheet';d.id='pcPick';d.style.zIndex='40';
-  d.innerHTML='<div class="pane"><div class="ph"><b>Escolher peças</b><button class="lnk" id="ppX">Fechar</button></div><input id="ppQ" class="f" placeholder="Buscar por descrição, código, ID ou equipamento" autocomplete="off"><div class="chd" id="ppF"></div><div class="note" id="ppN"></div><div id="ppL"></div><div class="btns" style="position:sticky;bottom:0;background:var(--sf);padding-top:8px"><button class="btn p" id="ppOk">Adicionar</button></div></div>';
+  d.innerHTML='<div class="pane"><div class="ph"><b>'+esc(opt.titulo||'Escolher peças')+'</b><button class="lnk" id="ppX">Fechar</button></div><input id="ppQ" class="f" placeholder="Buscar por descrição, código, ID ou equipamento" autocomplete="off"><div class="chd" id="ppF"></div><div class="note" id="ppN"></div><div id="ppL"></div><div class="btns" style="position:sticky;bottom:0;background:var(--sf);padding-top:8px"><button class="btn p" id="ppOk">Adicionar</button></div></div>';
   document.body.appendChild(d);
   const nSel=()=>Object.keys(sel).length;
   const desenha=()=>{const T=norm($('#ppQ').value).split(/\s+/).filter(Boolean);
-    $('#ppF').innerHTML=(nDeste?'<button type="button" data-e="eq" aria-pressed="'+(esc_==='eq')+'">Deste equipamento ('+nDeste+')</button>':'')+'<button type="button" data-e="todas" aria-pressed="'+(esc_==='todas')+'">Todas</button><button type="button" data-e="pecas" aria-pressed="'+(esc_==='pecas')+'">Aba Peças</button><button type="button" data-e="serras" aria-pressed="'+(esc_==='serras')+'">Serras e equipamentos</button>';
+    $('#ppF').innerHTML=(KT.length?'<button type="button" data-e="kits" aria-pressed="'+(esc_==='kits')+'">🧰 Kits ('+KT.length+')</button>':'')+(nDeste?'<button type="button" data-e="eq" aria-pressed="'+(esc_==='eq')+'">Deste equipamento ('+nDeste+')</button>':'')+'<button type="button" data-e="todas" aria-pressed="'+(esc_==='todas')+'">Todas</button><button type="button" data-e="pecas" aria-pressed="'+(esc_==='pecas')+'">Aba Peças</button><button type="button" data-e="serras" aria-pressed="'+(esc_==='serras')+'">Serras e equipamentos</button>';
+    if(esc_==='kits'){const F=KT.filter(kt=>{if(!T.length)return true;const t=norm(kt.nome+' '+kt.its.map(x=>x.id+' '+x.desc+' '+x.cod).join(' '));return T.every(w=>t.includes(w));});
+      $('#ppN').textContent=F.length+' kit(s)'+(nSel()?' · '+nSel()+' escolhido(s)':'')+' · o kit lança todas as peças dele de uma vez';
+      $('#ppL').innerHTML=F.length?'<div class="list">'+F.map(kt=>{const k='K|'+kt.nome,n=sel[k]||0;return '<div class="card" data-pp="'+esc(k)+'"><div class="ci"><div class="cd">🧰 '+esc(kt.nome)+'</div><div class="cm">'+kt.its.map(x=>esc(x.q+'× '+(x.desc||x.id))).join(' · ')+'</div><div class="cm">'+kt.pos+' kit(s) com o estoque atual</div></div><div class="stepper" style="margin:0"><button data-m="-1">−</button><input class="f" inputmode="numeric" value="'+n+'" data-q style="width:44px;text-align:center"><button data-m="1">+</button></div></div>';}).join('')+'</div>':'<div class="note">Nenhum kit encontrado.</div>';return;}
     const B=I.filter(x=>esc_==='eq'?x.deste:esc_==='pecas'?x.ab==='Peças':esc_==='serras'?x.ab!=='Peças':true);
     const F=B.filter(x=>{if(!T.length)return true;const t=norm(x.r.join(' ')+' '+x.eq);return T.every(w=>t.includes(w));});
     $('#ppN').textContent=F.length+' de '+B.length+' peças'+(nSel()?' · '+nSel()+' escolhida(s)':'');
@@ -1250,8 +1263,9 @@ function escolhePecas(alvo,aoFim,equipTxt){
   $('#ppL').oninput=e=>{const q=e.target.closest('[data-q]');if(!q)return;const k=q.closest('[data-pp]').dataset.pp;const n=Math.max(0,Math.round(num(q.value)||0));if(n)sel[k]=n;else delete sel[k];conta();};
   $('#ppOk').onclick=()=>{const ks=Object.keys(sel);if(!ks.length){toast('Escolha ao menos uma peça (use +)');return;}
     const E=ks.map(k=>I.find(x=>x.k===k)).filter(Boolean);
-    const txt=E.map(x=>sel[x.k]+'× '+x.rot+' '+v(x.a,x.r,'Descrição')+(x.ab!=='Peças'&&x.eq?' ('+x.eq+')':''));
-    alvo.value=[alvo.value.trim()].concat(txt).filter(Boolean).join(', ');if(aoFim)aoFim(E.map(x=>({id:x.id,aba:x.ab,q:sel[x.k],est:num(v(x.a,x.r,'Estoque atual'))||0})));sai();};
+    const EK=ks.filter(k=>k.indexOf('K|')===0).map(k=>({kt:KT.find(x=>'K|'+x.nome===k),n:sel[k]})).filter(x=>x.kt);
+    const txt=EK.map(x=>kitTexto(x.kt,x.n)).concat(E.map(x=>sel[x.k]+'× '+x.rot+' '+v(x.a,x.r,'Descrição')+(x.ab!=='Peças'&&x.eq?' ('+x.eq+')':'')));
+    alvo.value=[alvo.value.trim()].concat(txt).filter(Boolean).join(', ');if(aoFim){const R=E.map(x=>({id:x.id,aba:x.ab,q:sel[x.k],est:num(v(x.a,x.r,'Estoque atual'))||0}));EK.forEach(o=>o.kt.its.forEach(it=>{if(!it.p)return;const k=R.find(y=>y.id===it.id&&y.aba===it.ab);if(k)k.q+=it.q*o.n;else R.push({id:it.id,aba:it.ab,q:it.q*o.n,est:it.est});}));aoFim(R);}sai();};
   desenha();
 }
 function formHist(tipoPre,rEd){
@@ -1277,16 +1291,25 @@ function formHist(tipoPre,rEd){
     '<label id="hDfL">Defeito / serviço</label><textarea id="hDf" class="f"></textarea><label>Ação realizada</label><textarea id="hAc" class="f"></textarea>'+
     '<label>Peças usadas</label><div style="display:flex;gap:8px"><input id="hP" class="f" placeholder="ex.: 2× B021, 1× 4820005" style="flex:1"><button type="button" class="btn" id="hPl" style="white-space:nowrap">🔩 Peças</button></div>'+
     '<label style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="hPb"> Dar baixa no estoque das peças escolhidas</label>'+
-    '<label>Tempo parado (min)</label><input id="hTp" class="f" inputmode="numeric">'+
+    '<label>Tempo parado (min)</label><input id="hTp" class="f" inputmode="numeric" placeholder="tempo em que a produção ficou parada"><div class="note" id="hTpN">1 hora = 60 min · 1 dia = 1440 min</div>'+
+    '<label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="dfOn"> ⏳ Equipamento ficou com defeito por um período (ex.: aguardando peça)</label>'+
+    '<div id="dfBox" class="box" style="margin:6px 0" hidden><div class="two"><div><label>Com defeito desde</label><input id="dfDe" class="f" type="date"></div><div><label>Normalizado em</label><input id="dfAte" class="f" type="date"></div></div>'+
+      '<label>Nesse período o equipamento</label><select id="dfS" class="f">'+DF_SIT.map(o=>'<option>'+esc(o)+'</option>').join('')+'</select><div class="note" id="dfMsg"></div>'+
+      '<div class="note">Aparece no registro e no PDF do mês/semana: quantos dias o equipamento trabalhou com defeito ou ficou parado esperando a solução.</div></div>'+
     '<div class="box" style="margin:10px 0"><b>📷 Fotos da manutenção</b><div class="note">Pode escolher várias. Elas aparecem no registro e no PDF do mês/semana.</div>'+(ed?'<div class="ftgrid" id="hFtE">'+fotosDe('Histórico',chAnt).map(x=>{const id=String(x[0]),b=imgDe(id);return '<button type="button" class="ftth" data-ft="'+esc(id)+'">'+(b?'<img src="data:image/jpeg;base64,'+b+'" alt="">':'<span>…</span>')+'</button>';}).join('')+'</div>':'')+'<div class="ftgrid" id="hFtG"></div><div class="btns"><label class="btn">📷 Adicionar fotos<input type="file" accept="image/*" id="hFt" hidden multiple></label></div></div>'+
     '<div class="btns"><button class="btn p" id="hS">'+(ed?'Salvar alterações':'Salvar')+'</button>'+(ed&&isAdm()?'<button class="btn" id="hX" style="color:var(--cr)">🗑️ Excluir registro</button>':'')+'</div><div class="note">Sem internet, o registro fica guardado e é enviado depois.</div>');
-  if(ed){$('#hE').value=g0(['Equipamento']);$('#hA').value=g0(['Área'])||'Mecânica';$('#hDf').value=g0(['Defeito','Descrição','Serviço','Tarefa']);$('#hAc').value=g0(['Ação']);$('#hP').value=g0(['Peças']);$('#hTp').value=g0(['Tempo parado','Tempo']);
+  if(ed){$('#hE').value=g0(['Equipamento']);$('#hA').value=g0(['Área'])||'Mecânica';$('#hDf').value=g0(['Defeito','Descrição','Serviço','Tarefa']);$('#hAc').value=g0(['Ação']);$('#hP').value=g0(['Peças']);$('#hTp').value=g0(['Tempo parado','Tempo']);{const x=dfInfo(ha,rEd);if(x){$('#dfOn').checked=true;$('#dfDe').value=x.de;$('#dfAte').value=x.ate;$('#dfS').value=DF_SIT.indexOf(x.sit)>=0?x.sit:DF_SIT[0];}}
     $('#hFtE').onclick=ev=>{const b=ev.target.closest('[data-ft]');if(b)verFoto('Histórico',b.dataset.ft,()=>{fecha();renderLista();});};
     if($('#hX'))$('#hX').onclick=()=>excluirLinha('Histórico',rEd,'este registro de manutenção');}
   let hFotos=[];const hFtDes=()=>{$('#hFtG').innerHTML=hFotos.map((f,i)=>'<button type="button" class="ftth" data-rf="'+i+'" title="Tocar para remover"><img src="'+f.u+'" alt=""><small>✕ remover</small></button>').join('');};
   $('#hFt').onchange=ev=>{[...ev.target.files].forEach(f=>hFotos.push({f,u:URL.createObjectURL(f)}));ev.target.value='';hFtDes();};
   $('#hFtG').onclick=ev=>{const b=ev.target.closest('[data-rf]');if(!b)return;const x=hFotos.splice(+b.dataset.rf,1)[0];if(x)URL.revokeObjectURL(x.u);hFtDes();};
   let pcsEsc=[];$('#hPl').onclick=()=>escolhePecas($('#hP'),L=>{L.forEach(x=>{const k=pcsEsc.find(y=>y.id===x.id&&y.aba===x.aba);if(k)k.q+=x.q;else pcsEsc.push(x);});$('#hPb').checked=pcsEsc.some(x=>x.est>0);},$('#hE').value);
+  const tpN=()=>{const t=minTxt($('#hTp').value);$('#hTpN').textContent=t?'= '+t+' de produção parada':'1 hora = 60 min · 1 dia = 1440 min';};$('#hTp').addEventListener('input',tpN);tpN();
+  const dfMsg=()=>{$('#dfBox').hidden=!$('#dfOn').checked;if(!$('#dfOn').checked)return;if(!$('#dfAte').value)$('#dfAte').value=$('#hD').value||hoje();const de=$('#dfDe').value,ate=$('#dfAte').value;
+    $('#dfMsg').innerHTML=de&&ate?(ate<de?'⚠ A data de normalização é antes do início do defeito.':'<b>'+difDias(de,ate)+' dia(s)</b> com defeito ('+esc($('#dfS').value.toLowerCase())+')'):'Informe desde quando o equipamento estava com defeito.';};
+  ['dfOn','dfDe','dfAte','dfS'].forEach(i=>$('#'+i).addEventListener('change',dfMsg));$('#dfDe').addEventListener('input',dfMsg);dfMsg();
+  const dfVal=()=>{if(!$('#dfOn').checked)return null;const de=$('#dfDe').value,ate=$('#dfAte').value||$('#hD').value||hoje();return {de,ate,sit:$('#dfS').value,dias:de?Math.max(0,difDias(de,ate)):0};};
   const ehPrev=()=>(!ed&&$('#hT').value==='Preventiva')||$('#pvOpt').checked;
   const tarefasDo=()=>{const t=tagDoEquip($('#hE').value);return t?m.linhas.filter(r=>String(v(m,r,'Equipamento')).trim()===t):[];};
   const tarefaSel=()=>{const id=$('#pvSel').value;return id?m.linhas.find(r=>String(r[0])===id):null;};
@@ -1311,6 +1334,7 @@ function formHist(tipoPre,rEd){
     const equip=$('#hE').value.trim(),data=$('#hD').value||hoje();
     if(ehPrev()&&!$('#hDf').value.trim()&&!tarefaSel())$('#hDf').value=$('#pvX').value.trim();
     if(!equip||!$('#hDf').value.trim()){toast(ehPrev()?'Informe equipamento e serviço/tarefa':'Informe equipamento e defeito/serviço');return;}
+    const df=dfVal();if(df&&!df.de){toast('Informe desde quando o equipamento estava com defeito');return;}if(df&&df.ate<df.de){toast('A data de normalização é antes do início do defeito');return;}
     let idT='';
     if(ehPrev()){
       const dias=num($('#pvD').value);if($('#pvD').value.trim()&&!(dias>0)){toast('Dias deve ser um número maior que zero');return;}
@@ -1326,11 +1350,11 @@ function formHist(tipoPre,rEd){
     }
     if($('#hPb').checked&&pcsEsc.length&&$('#hP').value.trim())for(const x of pcsEsc)await enfileira({tipo:'somar',aba:x.aba||'Peças',id:x.id,campos:{'Estoque atual':-x.q}});
     if(ed){const h=ha.cab,cp={};const st=(nomes,val)=>{const i=col(h,...nomes);if(i>=0)cp[h[i]]=val;};
-      st(['Data'],data);st(['Tipo'],$('#hT').value);st(['Equipamento'],equip);st(['Área'],$('#hA').value);st(['Defeito','Descrição','Serviço'],$('#hDf').value.trim());st(['Ação'],$('#hAc').value.trim());st(['Peças'],$('#hP').value.trim());st(['Tempo parado','Tempo'],$('#hTp').value.trim());st(['Responsável','Executante','Técnico'],valResp('hR'));if(idT)st(['Tarefa','ID tarefa'],idT);
+      st(['Data'],data);st(['Tipo'],$('#hT').value);st(['Equipamento'],equip);st(['Área'],$('#hA').value);st(['Defeito','Descrição','Serviço'],$('#hDf').value.trim());st(['Ação'],$('#hAc').value.trim());st(['Peças'],$('#hP').value.trim());st(['Tempo parado','Tempo'],$('#hTp').value.trim());st(['Responsável','Executante','Técnico'],valResp('hR'));if(idT)st(['Tarefa','ID tarefa'],idT);st(['Defeito desde'],df?df.de:'');st(['Normalizado em'],df?df.ate:'');st(['Situação no período'],df?df.sit:'');st(['Dias com defeito'],df?df.dias:'');
       const fAnt=fotosDe('Histórico',chAnt);
       await enfileira(Object.assign({},refEd,{tipo:'atualizar',aba:'Histórico',campos:cp,admin:true}));
       const chN=regChave('Histórico',rEd);if(fAnt.length&&chN&&chaveN(chN)!==chaveN(chAnt))for(const x of fAnt)await enfileira({tipo:'atualizar',aba:FT_AB,id:String(x[0]),campos:{Registro:chN},admin:true});}
-    else await enfileira({tipo:'incluir',aba:'Histórico',prefixo:'H',campos:histCampos({data,tipo:$('#hT').value,equip,area:$('#hA').value,desc:$('#hDf').value.trim(),tarefa:idT,acao:$('#hAc').value.trim(),pecas:$('#hP').value.trim(),tempo:$('#hTp').value,resp:valResp('hR')})});
+    else await enfileira({tipo:'incluir',aba:'Histórico',prefixo:'H',campos:histCampos({data,tipo:$('#hT').value,equip,area:$('#hA').value,desc:$('#hDf').value.trim(),tarefa:idT,acao:$('#hAc').value.trim(),pecas:$('#hP').value.trim(),tempo:$('#hTp').value,resp:valResp('hR'),df})});
     const msgOk=ehPrev()&&$('#pvN').value?'Salvo · próxima em '+dataBR($('#pvN').value):(ed?'Alterações salvas':'Registro salvo');
     if(hFotos.length){const ch=ed?regChave('Histórico',rEd):'H:'+[data,equip,$('#hDf').value.trim()].join('|');$('#hS').disabled=true;const n=await anexaFotos(hFotos.map(x=>x.f),'Histórico',ch,true);hFotos.forEach(x=>URL.revokeObjectURL(x.u));toast(msgOk+' · '+n+' foto(s)');}
     else toast(msgOk);
@@ -1493,15 +1517,57 @@ function formCompra(p){
     toast('Incluído em Compras');fecha();if(S.tab==='compras')renderLista();
   };
 }
-/* Kits: agrupa as linhas pela coluna Kit; kits possíveis = menor valor entre os itens */
-function kitsHtml(k){
-  const ik=col(k.cab,'Kit'),id=col(k.cab,'Descrição'),iq=col(k.cab,'Qtd por kit'),ie=col(k.cab,'Estoque atual'),ip=col(k.cab,'Kits possíveis'),ic=col(k.cab,'Código');
-  const g={};k.linhas.forEach(r=>{const n=r[ik];if(!n)return;(g[n]=g[n]||[]).push(r);});
-  return '<div class="list" style="margin-top:8px">'+Object.keys(g).filter(n=>busca(n+' '+g[n].map(r=>r.join(' ')).join(' '))).map(n=>{
-    const its=g[n];const pos=Math.min(...its.map(r=>num(r[ip])));
-    return '<div class="card" style="cursor:default;display:block"><div class="top"><div class="cd">'+esc(n)+'</div><span class="tag '+(pos<1?'c':'')+'">'+pos+' kit'+(pos===1?'':'s')+'</span></div>'+
-      its.map(r=>'<div class="cm">'+(num(r[ip])<1?'⚠ ':'')+esc(r[id])+' <span class="cc">'+esc(r[ic])+'</span> · '+esc(r[iq])+'/kit · estoque '+esc(r[ie])+'</div>').join('')+'</div>';
-  }).join('')+'</div>';
+/* ================= KITS DE MONTAGEM (botoeiras etc.) =================
+   Aba Kits: uma linha por peça do kit (Kit · ID peça · Qtd por kit). Kits possíveis = calculado aqui pelo estoque atual da aba Peças. */
+const KIT_AB='Kits';
+function pecaPorId(id){id=String(id==null?'':id).trim();if(!id)return null;for(const ab of ['Peças','manuais_pecas']){const a=aba(ab);if(!a.cab.length)continue;const r=a.linhas.find(x=>String(x[0]).trim()===id);if(r)return {ab,a,r,id,desc:v(a,r,'Descrição'),cod:v(a,r,'Código'),est:num(v(a,r,'Estoque atual'))||0};}return null;}
+function kitsLista(){const k=aba(KIT_AB);if(!k.cab.length)return [];const ik=col(k.cab,'Kit'),ii=col(k.cab,'ID peça'),iq=col(k.cab,'Qtd por kit'),id=col(k.cab,'Descrição'),ic=col(k.cab,'Código');if(ik<0||ii<0)return [];
+  const g={},ord=[];k.linhas.forEach(r=>{const n=String(r[ik]==null?'':r[ik]).trim(),pid=String(r[ii]==null?'':r[ii]).trim();if(!n||!pid)return;if(!g[n]){g[n]=[];ord.push(n);}
+    const p=pecaPorId(pid);const q=Math.max(1,num(iq>=0?r[iq]:1)||1);g[n].push({r,id:pid,q,p,ab:p?p.ab:'Peças',desc:p?p.desc:String(id>=0&&r[id]!=null?r[id]:''),cod:p?p.cod:String(ic>=0&&r[ic]!=null?r[ic]:''),est:p?p.est:0});});
+  return ord.map(n=>{const its=g[n];its.forEach(x=>x.da=Math.floor(x.est/x.q));return {nome:n,its,pos:its.length?Math.max(0,Math.min(...its.map(x=>x.da))):0};});}
+function kitTexto(kt,n){return 'Kit '+kt.nome+' ×'+n+' ['+kt.its.map(x=>(x.q*n)+'× '+x.id+(x.desc?' '+x.desc:'')).join('; ')+']';}
+/* mostra o texto de "Peças usadas" com os kits abertos item por item (tela e PDF) */
+function pecasHtml(t){t=String(t==null?'':t);const re=/Kit (.+?) ×(\d+) \[([^\]]*)\]/g;let h='',i=0,m;
+  while((m=re.exec(t))){const ant=t.slice(i,m.index).replace(/^[\s,;]+|[\s,;]+$/g,'');if(ant)h+=esc(ant)+'<br>';h+='<b>🧰 Kit '+esc(m[1])+' ×'+esc(m[2])+'</b><br><small>'+m[3].split(/;\s*/).map(esc).join('<br>')+'</small><br>';i=re.lastIndex;}
+  const fim=t.slice(i).replace(/^[\s,;]+|[\s,;]+$/g,'');if(fim)h+=esc(fim);return h.replace(/<br>$/,'');}
+function kitsHtml(){const K=kitsLista().filter(kt=>busca(kt.nome+' '+kt.its.map(x=>x.id+' '+x.desc+' '+x.cod).join(' ')));
+  return '<div class="note">Kits possíveis = quantos conjuntos completos dá para montar com o estoque atual da aba Peças. Ao lançar uma manutenção, escolha o kit em “🔩 Peças → 🧰 Kits”.</div>'+
+    (isAdm()?'<div class="btns" style="margin-top:6px"><button class="btn" id="kNovo">➕ Montar novo kit</button></div>':'')+
+    (K.length?'<div class="list" style="margin-top:8px">'+K.map(kt=>{const lim=kt.its.filter(x=>x.da<=kt.pos);
+      return '<div class="card" style="cursor:default;display:block"><div class="top"><div class="cd">🧰 '+esc(kt.nome)+'</div><span class="tag '+(kt.pos<1?'c':'')+'">'+kt.pos+' kit'+(kt.pos===1?'':'s')+'</span></div>'+
+        kt.its.map(x=>'<div class="cm">'+(!x.p?'⚠ <b>'+esc(x.id)+'</b> não está cadastrada na aba Peças':(x.da<1?'⚠ ':'')+esc(x.q)+'× '+esc(x.desc)+' <span class="cc">'+esc(x.cod)+'</span> · estoque '+esc(x.est)+(x.da<1?' <b style="color:var(--cr)">(falta '+(x.q-x.est)+')</b>':''))+'</div>').join('')+
+        (kt.pos<1&&lim.length?'<div class="note" style="margin-top:4px">Para montar 1 kit falta: '+lim.filter(x=>x.da<1).map(x=>esc(x.p?x.desc:x.id)).join(', ')+'</div>':'')+
+        (isAdm()?'<div class="btns" style="margin-top:6px"><button class="btn" data-kit="'+esc(kt.nome)+'">✏️ Editar kit</button></div>':'')+'</div>';}).join('')+'</div>':'<div class="note">Nenhum kit montado ainda.</div>');}
+function ligaKits(V){const b=V.querySelector('#kNovo');if(b)b.onclick=()=>formKit();V.querySelectorAll('[data-kit]').forEach(x=>x.onclick=()=>formKit(x.dataset.kit));}
+async function kitExcluiLinhas(rs){const K=aba(KIT_AB);rs=rs.slice().sort((a,b)=>K.linhas.indexOf(b)-K.linhas.indexOf(a));
+  for(const r of rs){if(K.linhas.indexOf(r)<0)continue;const ref=refLinha(KIT_AB,r);await enfileira(Object.assign({tipo:'excluir',aba:KIT_AB,admin:true},ref));}}
+function formKit(nome){
+  if(!isAdm()){toast('Só o administrador monta ou altera kits');return;}
+  const kt=nome?kitsLista().find(x=>x.nome===nome):null;if(nome&&!kt){toast('Kit não encontrado');return;}
+  const its=kt?kt.its.map(x=>({id:x.id,q:x.q,q0:x.q,r:x.r})):[];
+  abre('<div class="ph"><b>'+(kt?'✏️ Editar kit':'🧰 Montar novo kit')+'</b><button class="lnk" data-x>Fechar</button></div>'+
+    '<label>Nome do kit</label><input id="kfN" class="f" value="'+esc(nome||'')+'" placeholder="ex.: Botoeira de emergência">'+
+    '<label>Peças do kit · quantidade por kit</label><div id="kfL" class="list"></div>'+
+    '<div class="btns"><button class="btn" id="kfAdd">🔩 Adicionar peças</button></div><div class="note" id="kfP"></div>'+
+    '<div class="btns"><button class="btn p" id="kfS">Salvar kit</button>'+(kt?'<button class="btn" id="kfX" style="color:var(--cr)">🗑️ Excluir kit</button>':'')+'</div><div class="note">As peças continuam cadastradas na aba Peças; o kit só diz quais e quantas formam o conjunto.</div>');
+  const des=()=>{$('#kfL').innerHTML=its.length?its.map((x,i)=>{const p=pecaPorId(x.id);return '<div class="card" style="cursor:default"><div class="ci"><div class="cd">'+esc(p?p.desc:'Peça '+x.id+' (não encontrada)')+'</div><div class="cm">'+esc(x.id)+(p&&p.cod?' · '+esc(p.cod):'')+' · estoque '+(p?p.est:0)+'</div></div><div class="stepper" style="margin:0"><button type="button" data-m="-1" data-i="'+i+'">−</button><input class="f" inputmode="numeric" value="'+x.q+'" data-q="'+i+'" style="width:44px;text-align:center"><button type="button" data-m="1" data-i="'+i+'">+</button></div><button type="button" class="lnk" data-rm="'+i+'" style="color:var(--cr);margin-left:6px" title="Tirar do kit">✕</button></div>';}).join(''):'<div class="note">Nenhuma peça ainda. Toque em “🔩 Adicionar peças”.</div>';
+    const pos=its.length?Math.min(...its.map(x=>{const p=pecaPorId(x.id);return Math.floor((p?p.est:0)/x.q);})):0;$('#kfP').textContent=its.length?'Com o estoque atual dá para montar '+Math.max(0,pos)+' kit(s).':'';};
+  des();
+  $('#kfL').onclick=e=>{const m=e.target.closest('[data-m]');if(m){const x=its[+m.dataset.i];x.q=Math.max(1,x.q+(+m.dataset.m));des();return;}const rm=e.target.closest('[data-rm]');if(rm){its.splice(+rm.dataset.rm,1);des();}};
+  $('#kfL').onchange=e=>{const q=e.target.closest('[data-q]');if(q){its[+q.dataset.q].q=Math.max(1,Math.round(num(q.value)||1));des();}};
+  $('#kfAdd').onclick=()=>{const tmp=document.createElement('input');escolhePecas(tmp,L=>{L.forEach(y=>{const k=its.find(x=>x.id===y.id);if(k)k.q+=y.q;else its.push({id:y.id,q:y.q});});des();},'',{semKits:true,titulo:'Peças do kit'});};
+  $('#kfS').onclick=async()=>{const n=$('#kfN').value.trim();
+    if(!n){toast('Dê um nome ao kit');return;}if(!its.length){toast('Adicione ao menos uma peça');return;}
+    if(/[\[\]×]/.test(n)){toast('O nome não pode ter [ ] ou ×');return;}
+    if(norm(n)!==norm(nome||'')&&kitsLista().some(x=>norm(x.nome)===norm(n))){toast('Já existe um kit com esse nome');return;}
+    $('#kfS').disabled=true;
+    const fica=new Set(its.filter(x=>x.r).map(x=>x.r));
+    await kitExcluiLinhas((kt?kt.its.map(x=>x.r):[]).filter(r=>!fica.has(r)));
+    for(const x of its){
+      if(x.r){if(x.q!==x.q0||n!==nome){const ref=refLinha(KIT_AB,x.r);await enfileira(Object.assign({},ref,{tipo:'atualizar',aba:KIT_AB,admin:true,campos:{'Kit':n,'Qtd por kit':x.q}}));}}
+      else await enfileira({tipo:'incluir',aba:KIT_AB,campos:{'Kit':n,'ID peça':x.id,'Qtd por kit':x.q}});}
+    toast('🧰 Kit “'+n+'” salvo');fecha();renderLista();};
+  if(kt)$('#kfX').onclick=async()=>{if(!confirmar('Excluir o kit “'+nome+'”?\n\nAs peças continuam na aba Peças.'))return;await kitExcluiLinhas(kt.its.map(x=>x.r));toast('Kit excluído');fecha();renderLista();};
 }
 /* ================= CHECKLIST DIÁRIO ================= */
 const CK_CATS=['Segurança','Mecânica','Elétrica','Lubrificação','Limpeza / higiene','Operacional'];
@@ -2090,9 +2156,9 @@ async function lMais(V){
   const imgs=Object.keys(S.img).length;
   V.innerHTML='<div class="box"><b>'+esc(S.user.nome)+'</b><div class="note">Perfil: '+esc(S.user.perfil)+'</div><div class="btns">'+'<button class="btn" id="mManual">📘 Manutenção segundo o Manual</button><button class="btn" id="mEsq">📐 Esquema elétrico</button>'+(isAdm()?'<button class="btn" id="mUsu">👥 Usuários</button><button class="btn" id="mNomes">✏️ Renomear abas e campos</button>':'')+'<button class="btn" id="mSair">Sair</button></div></div>'+
     '<div class="box"><b>Dados no celular</b><div class="note">'+Object.keys(S.d.abas).map(n=>esc(n)+': '+S.d.abas[n].linhas.length).join(' · ')+'</div><div class="note">Imagens guardadas: '+imgs+'</div><div class="note">Lançamentos aguardando envio: '+nf+'</div><div class="btns"><button class="btn" id="mFila">Ver fila</button><button class="btn" id="mImg">Baixar imagens de novo</button></div></div>'+
-    (k.linhas.length?'<div class="box"><b>Kits</b>'+kitsHtml(k)+'</div>':'')+
+    (k.cab.length?'<div class="box"><b>🧰 Kits de montagem</b>'+kitsHtml()+'</div>':'')+
     '<div class="note" style="text-align:center;margin:16px 0">PCM · app v'+esc(CONFIG.VERSAO)+'<br><span style="opacity:.75">Criado por Mel.B System</span></div>';
-  $('#mSair').onclick=sair;$('#mManual').onclick=abreManual;$('#mEsq').onclick=()=>abreEsquema({});if(isAdm()){$('#mNomes').onclick=()=>formNomes();$('#mUsu').onclick=()=>telaUsuarios();}$('#mImg').onclick=()=>{baixaImagens(true);toast('Baixando imagens…');};
+  ligaKits(V);$('#mSair').onclick=sair;$('#mManual').onclick=abreManual;$('#mEsq').onclick=()=>abreEsquema({});if(isAdm()){$('#mNomes').onclick=()=>formNomes();$('#mUsu').onclick=()=>telaUsuarios();}$('#mImg').onclick=()=>{baixaImagens(true);toast('Baixando imagens…');};
   $('#mFila').onclick=async()=>{const f=(await all('fila')).map(x=>x[1]).sort((a,b)=>a.ts-b.ts);abre('<div class="ph"><b>Fila de envio</b><button class="lnk" data-x>Fechar</button></div>'+(f.length?f.map(o=>'<div class="card" style="cursor:default"><div class="ci"><div class="cd">'+esc(o.tipo)+' · '+esc(o.aba||'imagem')+' '+esc(o.id||'')+'</div><div class="cm">'+new Date(o.ts).toLocaleString('pt-BR')+(o.erro?' · <span class="tag c">'+esc(o.erro)+'</span>':'')+'</div></div><button class="lnk" data-del="'+o.uid+'">Descartar</button></div>').join(''):'<div class="empty">Nada pendente.</div>'));
     $('#pane').querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{if(!confirmar('Descartar este lançamento? Ele não será enviado.'))return;await del('fila',b.dataset.del);S.fila=await count('fila');status();b.closest('.card').remove();});};
 }
