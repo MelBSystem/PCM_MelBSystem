@@ -711,7 +711,7 @@ function botoesAdm(id){return isEd()?'<div class="btns admbtns"><button class="b
 function editarLinha(nAba,r,opBase,titulo,depois,opts){
   opts=opts||{};
   const a=aba(nAba);
-  const cols=a.cab.map((c,i)=>[c,i]).filter(([c])=>c&&!ED_FORA.test(norm(c)));
+  const cols=a.cab.map((c,i)=>[c,i]).filter(([c])=>c&&!ED_FORA.test(norm(c))&&!(opts.fora&&opts.fora.test(norm(c))));
   const iD=col(a.cab,'Descrição');
   cols.sort((x,y)=>(x[1]===iD?-1:0)-(y[1]===iD?-1:0));
   const longo=c=>/descri|observ|obs\b|tarefa|item de verif|defeito|acao|ação/i.test(c);
@@ -795,7 +795,7 @@ function detEquip(V,id){
   $('#ttl').textContent='← '+(e.setor||'')+' '+e.nome;$('#ttl').style.cursor='pointer';$('#ttl').onclick=()=>{S.eqSel=null;$('#ttl').onclick=null;$('#ttl').style.cursor='';render();};
   const L=ligacoes(e);const ab=S.eqAba||'eletrica';const adm=isEd();
   const tabs=[['eletrica','Elétrica ('+e.itens.length+')'],['pecas','Peças ('+L.pecas.length+')'],['man','Manutenção ('+L.tarefas.length+')']].concat(e.manual||L.man.length?[['manual','Manual ('+L.man.length+')']]:[]).concat([['dados','Dados']]);
-  let h='<div class="btns" style="margin-top:8px"><button class="btn" id="eqV">← Voltar</button>'+(e.itens.length?'<button class="btn" id="eqEsq">📐 Esquema deste equipamento</button>':'')+(adm?'<button class="btn" id="eqEd">✏️ '+(isAdm()?'Editar / excluir':'Editar')+' equipamento</button>':'')+'</div>'+blocoFotosV(EQ_AB,e.id,'Foto do equipamento')+'<div class="seg">'+tabs.map(([k,t])=>'<button data-ea="'+k+'" aria-pressed="'+(ab===k)+'">'+esc(t)+'</button>').join('')+'</div>';
+  let h='<div class="btns" style="margin-top:8px"><button class="btn" id="eqV">← Voltar</button>'+(e.itens.length?'<button class="btn" id="eqEsq">📐 Esquema deste equipamento</button>':'')+(adm?'<button class="btn" id="eqEd">✏️ '+(isAdm()?'Editar / excluir':'Editar')+' equipamento</button>':'')+'</div>'+blocoFotosV(EQ_AB,e.id,'Foto do equipamento')+((IV=>IV.length?'<div class="box" style="margin:8px 0"><b>⚡ Inversor'+(IV.length>1?'es':'')+'</b>'+IV.map(x=>'<div class="cm"><b>'+esc(x.tag)+'</b> · '+esc(x.mod)+' ('+esc(x.kwi)+' kW) · motor '+esc(x.mot)+' '+esc(x.pm)+'</div>').join('')+'<div class="btns"><button class="btn" id="eqInv">Ver ficha e iguais</button></div></div>':'')(invDoEquip(e.setor)))+'<div class="seg">'+tabs.map(([k,t])=>'<button data-ea="'+k+'" aria-pressed="'+(ab===k)+'">'+esc(t)+'</button>').join('')+'</div>';
   if(ab==='eletrica'){
     const I=e.itens.filter(i=>busca(i.tag+' '+i.desc+' '+i.cod+' '+i.fam+' '+i.local));
     GRUPOS_EQ.forEach(g=>{const G=I.filter(i=>i.grp===g);if(!G.length)return;
@@ -829,6 +829,7 @@ function detEquip(V,id){
   }
   V.innerHTML=h;
   $('#eqV').onclick=()=>{S.eqSel=null;$('#ttl').onclick=null;render();};
+  const ivB=$('#eqInv');if(ivB)ivB.onclick=()=>abreInversores(e.setor);
   ligaFotosV(V,renderLista);
   if(adm)$('#eqEd').onclick=()=>editarLinha(EQ_AB,e.r,{id:e.id},e.nome,null,{avisoExcluir:e.itens.length?'Os '+e.itens.length+' itens elétricos deste equipamento também serão excluídos.':'',aoExcluir:async()=>{for(const i of e.itens){await excluiFotosDo(IT_AB,i.r);await enfileira({tipo:'excluir',aba:IT_AB,id:i.id,admin:true});}S.eqSel=null;}});
   const nt=$('#eqNt');if(nt)nt.onclick=()=>{S.mUlt=e.setor;formTarefa();};
@@ -2154,13 +2155,59 @@ async function esqLista(q){
 async function lMais(V){
   const k=aba('Kits');const nf=S.fila;
   const imgs=Object.keys(S.img).length;
-  V.innerHTML='<div class="box"><b>'+esc(S.user.nome)+'</b><div class="note">Perfil: '+esc(S.user.perfil)+'</div><div class="btns">'+'<button class="btn" id="mManual">📘 Manutenção segundo o Manual</button><button class="btn" id="mEsq">📐 Esquema elétrico</button>'+(isAdm()?'<button class="btn" id="mUsu">👥 Usuários</button><button class="btn" id="mNomes">✏️ Renomear abas e campos</button>':'')+'<button class="btn" id="mSair">Sair</button></div></div>'+
+  V.innerHTML='<div class="box"><b>'+esc(S.user.nome)+'</b><div class="note">Perfil: '+esc(S.user.perfil)+'</div><div class="btns">'+'<button class="btn" id="mManual">📘 Manutenção segundo o Manual</button><button class="btn" id="mEsq">📐 Esquema elétrico</button><button class="btn" id="mInv">⚡ Inversores</button>'+(isAdm()?'<button class="btn" id="mUsu">👥 Usuários</button><button class="btn" id="mNomes">✏️ Renomear abas e campos</button>':'')+'<button class="btn" id="mSair">Sair</button></div></div>'+
     '<div class="box"><b>Dados no celular</b><div class="note">'+Object.keys(S.d.abas).map(n=>esc(n)+': '+S.d.abas[n].linhas.length).join(' · ')+'</div><div class="note">Imagens guardadas: '+imgs+'</div><div class="note">Lançamentos aguardando envio: '+nf+'</div><div class="btns"><button class="btn" id="mFila">Ver fila</button><button class="btn" id="mImg">Baixar imagens de novo</button></div></div>'+
     (k.cab.length?'<div class="box"><b>🧰 Kits de montagem</b>'+kitsHtml()+'</div>':'')+
     '<div class="note" style="text-align:center;margin:16px 0">PCM · app v'+esc(CONFIG.VERSAO)+'<br><span style="opacity:.75">Criado por Mel.B System</span></div>';
-  ligaKits(V);$('#mSair').onclick=sair;$('#mManual').onclick=abreManual;$('#mEsq').onclick=()=>abreEsquema({});if(isAdm()){$('#mNomes').onclick=()=>formNomes();$('#mUsu').onclick=()=>telaUsuarios();}$('#mImg').onclick=()=>{baixaImagens(true);toast('Baixando imagens…');};
+  ligaKits(V);$('#mSair').onclick=sair;$('#mManual').onclick=abreManual;$('#mEsq').onclick=()=>abreEsquema({});$('#mInv').onclick=()=>abreInversores();if(isAdm()){$('#mNomes').onclick=()=>formNomes();$('#mUsu').onclick=()=>telaUsuarios();}$('#mImg').onclick=()=>{baixaImagens(true);toast('Baixando imagens…');};
   $('#mFila').onclick=async()=>{const f=(await all('fila')).map(x=>x[1]).sort((a,b)=>a.ts-b.ts);abre('<div class="ph"><b>Fila de envio</b><button class="lnk" data-x>Fechar</button></div>'+(f.length?f.map(o=>'<div class="card" style="cursor:default"><div class="ci"><div class="cd">'+esc(o.tipo)+' · '+esc(o.aba||'imagem')+' '+esc(o.id||'')+'</div><div class="cm">'+new Date(o.ts).toLocaleString('pt-BR')+(o.erro?' · <span class="tag c">'+esc(o.erro)+'</span>':'')+'</div></div><button class="lnk" data-del="'+o.uid+'">Descartar</button></div>').join(''):'<div class="empty">Nada pendente.</div>'));
     $('#pane').querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{if(!confirmar('Descartar este lançamento? Ele não será enviado.'))return;await del('fila',b.dataset.del);S.fila=await count('fila');status();b.closest('.card').remove();});};
+}
+
+/* ================= INVERSORES (aba Inversores — levantados do esquema elétrico) ================= */
+const INV_AB='Inversores';
+const INV_COR={'ATV320U06N4B':'#bddbf7','ATV320U30N4B':'#ccebc7','ATV320U40N4B':'#e0d1f2','ATV320U75N4B':'#ffdeb3','ATV320D11N4B':'#fac7c7'};
+const INV_FORA=/^(mesmo inversor que|mesmo motor)/;
+function invLista(){const a=aba(INV_AB);if(!a.cab.length)return [];const g=(r,...k)=>{const x=v(a,r,...k);return String(x==null?'':x).trim();};
+  return a.linhas.filter(r=>/^UMI/i.test(String(r[0]==null?'':r[0]).trim())).map(r=>({r,tag:g(r,'Tag inversor'),mod:g(r,'Modelo'),kwi:g(r,'Potência inversor'),iin:g(r,'Corrente entrada'),iout:g(r,'Corrente saída'),mot:g(r,'Motor(es)'),eq:g(r,'Função'),pm:g(r,'Potência motor'),am:g(r,'Corrente motor'),tagapp:g(r,'Equipamento no app'),dj:g(r,'Disjuntor'),res:g(r,'Resistor'),fr:g(r,'Freio'),com:g(r,'Comunicação'),loc:g(r,'Local no quadro'),circ:g(r,'Circuito'),folha:g(r,'Folha'),peca:g(r,'ID na aba Peças'),obs:g(r,'Observações')}));}
+const invKw=s=>parseFloat(String(s).replace(',','.'))||0;
+function invCor(L,x){const n=L.filter(y=>y.mod===x.mod).length;return n>1?(INV_COR[x.mod]||'#f6dcc0'):'#e6e6e6';}
+function invDoEquip(tag){tag=norm(tag||'');if(!tag)return [];return invLista().filter(x=>norm(x.tagapp)===tag);}
+function abreInversores(q0){
+  const L0=invLista();
+  if(!L0.length){toast('A aba Inversores ainda não chegou neste aparelho. Toque em Sincronizar.');return;}
+  const mods={};L0.forEach(x=>mods[x.mod]=(mods[x.mod]||0)+1);
+  const grupos=Object.keys(mods).filter(m=>mods[m]>1).sort((a,b)=>invKw(L0.find(x=>x.mod===b).kwi)-invKw(L0.find(x=>x.mod===a).kwi));
+  let flt='all',vw='grp';try{vw=ls.get('pcm2_invv')||'grp';}catch(e){}
+  abre('<div class="ph"><b>⚡ Inversores dos motores</b><button class="lnk" data-x>Fechar</button></div>'+
+    '<div class="note">'+L0.length+' inversores · '+Object.keys(mods).length+' modelos · mesma cor = mesmo inversor. Dados do esquema elétrico; '+(isEd()?'toque em ✏️ para corrigir.':'só o pessoal que lança pode corrigir.')+'</div>'+
+    '<input id="ivQ" class="q" type="search" placeholder="Buscar equipamento, tag, motor ou modelo" value="'+esc(q0||'')+'" autocomplete="off">'+
+    '<div class="seg" id="ivV"><button data-v="grp">Por inversor</button><button data-v="pot">Mesma potência</button></div>'+
+    '<div class="chips" id="ivF"><button class="chip" data-g="all" aria-pressed="true">Todos ('+L0.length+')</button>'+grupos.map(m=>'<button class="chip" data-g="'+esc(m)+'" aria-pressed="false"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+INV_COR[m]+';border:1px solid #0003;margin-right:4px"></span>'+esc(m.replace('ATV320','').replace('N4B',''))+' ('+mods[m]+')</button>').join('')+'<button class="chip" data-g="un" aria-pressed="false">Únicos ('+Object.keys(mods).filter(m=>mods[m]===1).length+')</button></div><div id="ivL"></div>');
+  const card=x=>{const mi=L0.filter(y=>y!==x&&y.mod===x.mod),mm=L0.filter(y=>y!==x&&y.pm===x.pm);
+    return '<div class="card" style="display:block;cursor:default;padding:0;overflow:hidden;margin-bottom:8px"><div style="background:'+invCor(L0,x)+';color:#141414;padding:10px 12px;display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div><b>'+esc(x.eq)+'</b><div style="font-size:13px;opacity:.8">'+esc(x.tagapp||'—')+' · motor '+esc(x.mot)+'</div></div><b style="white-space:nowrap;font-size:13px;background:#0001;padding:2px 8px;border-radius:8px">'+esc(x.tag)+'</b></div>'+
+      '<div style="padding:8px 12px"><div class="cm"><b>Inversor:</b> '+esc(x.mod)+' · '+esc(x.kwi)+' kW</div><div class="cm"><b>Motor:</b> '+esc(x.pm)+' · '+esc(x.am)+' A</div>'+
+      '<div class="cm"><b>Mesmo inversor que:</b> '+(mi.length?mi.map(y=>esc(y.eq)+(y.tagapp?' ('+esc(y.tagapp)+')':'')).join(' · '):'único na linha')+'</div>'+
+      '<div class="cm"><b>Mesmo motor que:</b> '+(mm.length?mm.map(y=>esc(y.eq)).join(' · '):'—')+'</div>'+
+      '<details style="margin-top:4px"><summary class="cm" style="cursor:pointer;color:var(--ac);font-weight:600">Mais detalhes</summary>'+
+      [['Corrente entrada / saída',x.iin+' / '+x.iout+' A'],['Disjuntor motor',x.dj],['Resistor de frenagem',x.res],['Freio motor',x.fr],['Comunicação',x.com],['Local / circuito',x.loc+' · '+x.circ],['Folha do esquema',x.folha],['ID na aba Peças',x.peca],['Observações',x.obs]].filter(p=>p[1]&&p[1]!=='—').map(p=>'<div class="cm"><b>'+esc(p[0])+':</b> '+esc(p[1])+'</div>').join('')+'</details>'+
+      (isEd()?'<div class="btns" style="margin-top:6px"><button class="btn" data-ive="'+esc(x.tag)+'">✏️ Corrigir dados</button></div>':'')+'</div></div>';};
+  const des=()=>{const t=norm($('#ivQ').value.trim());
+    $('#ivV').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===vw));
+    const L=L0.filter(x=>(flt==='all'||(flt==='un'?mods[x.mod]===1:x.mod===flt))&&(!t||norm(Object.values(x).filter(y=>typeof y==='string').join(' ')).includes(t)));
+    if(!L.length){$('#ivL').innerHTML='<div class="empty">Nada encontrado.</div>';return;}
+    if(vw==='grp'){$('#ivL').innerHTML=grupos.concat(['un']).map(g=>{const A=L.filter(x=>g==='un'?mods[x.mod]===1:x.mod===g).sort((a,b)=>invKw(a.kwi)-invKw(b.kwi));if(!A.length)return '';
+        const mesmo=new Set(A.map(x=>x.pm)).size===1;
+        return '<h3 style="margin:14px 0 6px;font-size:16px">'+(g==='un'?'Únicos na linha':esc(g)+' · '+esc(A[0].kwi)+' kW')+' <small style="font-weight:400;opacity:.7">'+(g==='un'?'um de cada modelo':A.length+' equipamentos · '+(mesmo?'mesmo motor':'motores diferentes'))+'</small></h3>'+A.map(card).join('');}).join('');}
+    else{const P={};L.forEach(x=>{(P[x.pm]=P[x.pm]||[]).push(x);});
+      $('#ivL').innerHTML=Object.keys(P).sort((a,b)=>invKw(b)-invKw(a)).map(k=>'<div class="card" style="display:block;cursor:default;margin-bottom:8px"><b>'+esc(k)+'</b> <small style="opacity:.7">'+P[k].length+' motor(es)</small><div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">'+P[k].map(x=>'<span style="background:'+invCor(L0,x)+';color:#141414;padding:3px 9px;border-radius:8px;font-size:13px">'+esc(x.eq)+' · '+esc(x.mod.replace('ATV320',''))+'</span>').join('')+'</div></div>').join('');}
+    $('#ivL').insertAdjacentHTML('beforeend','<div class="note" style="margin-top:12px"><b>Emergência:</b> um inversor maior da mesma família pode substituir um menor (nunca o contrário), reconfigurando dados do motor, rampas, freio e endereço CANopen.</div>');};
+  $('#ivQ').oninput=des;
+  $('#ivV').onclick=e=>{const b=e.target.closest('[data-v]');if(!b)return;vw=b.dataset.v;try{ls.set('pcm2_invv',vw);}catch(er){}des();};
+  $('#ivF').onclick=e=>{const b=e.target.closest('[data-g]');if(!b)return;flt=b.dataset.g;$('#ivF').querySelectorAll('[data-g]').forEach(x=>x.setAttribute('aria-pressed',x===b));des();};
+  $('#ivL').onclick=e=>{const b=e.target.closest('[data-ive]');if(!b)return;const x=L0.find(y=>y.tag===b.dataset.ive);if(!x)return;const q1=$('#ivQ').value;
+    editarLinha(INV_AB,x.r,{id:x.tag},'inversor '+x.tag,()=>abreInversores(q1),{fora:INV_FORA,avisoExcluir:'Exclui só a linha deste inversor na aba Inversores.'});};
+  des();
 }
 
 /* ---- cadastro de usuários (somente administrador, precisa de internet) ---- */
